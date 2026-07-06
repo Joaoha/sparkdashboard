@@ -71,8 +71,10 @@ On the new Spark:
 ```bash
 git clone https://github.com/joaoha/sparkdashboard.git
 cd sparkdashboard
-./install.sh --models all --start dashboard
+./install.sh --models all --packages all --start dashboard
 ```
+
+Add `--package-models all` if this fresh machine should also download optional app model weights in the same run.
 
 This will:
 
@@ -81,9 +83,11 @@ This will:
 3. enable the dashboard and proxy units
 4. create convenience commands:
    - `sparkdashboard-download-models`
+   - `sparkdashboard-install-packages`
    - `sparkdashboard-status`
-5. download selected Hugging Face model snapshots
-6. start the dashboard
+5. download selected Hugging Face text model snapshots
+6. install selected optional app packages when `--packages` is used
+7. start the dashboard
 
 Open the dashboard:
 
@@ -121,6 +125,28 @@ Or all at once:
 sparkdashboard-download-models qwen,ornith,mistral --model-dir ~/models/hf
 ```
 
+## 5. Install optional app packages
+
+The dashboard can also install the optional app packages shown in its service grid:
+
+```bash
+./install.sh --skip-model-download --packages all --start dashboard
+```
+
+Install optional app packages and download optional package weights where implemented:
+
+```bash
+./install.sh --skip-model-download --packages all --package-models all --start dashboard
+```
+
+For selected packages:
+
+```bash
+./install.sh --skip-model-download --packages z-image,qwen-image,flux2,krea2 --start dashboard
+```
+
+See [Optional Spark app packages](optional-packages.md) for package names, ports, caveats, and verification.
+
 ## 6. Custom install options
 
 Common custom install:
@@ -143,7 +169,10 @@ Installer options:
 | `--model-dir PATH` | Parent directory for model snapshots. Default `~/models/hf` |
 | `--public-host HOST` | Hostname used in dashboard links. Default `hostname -f` or `hostname` |
 | `--dashboard-port PORT` | Dashboard port. Default `7862` |
-| `--models all` | Download all known models |
+| `--models all` | Download all known text models |
+| `--packages all` | Install all optional Spark app package scaffolding/dependencies |
+| `--package-models all` | Also download optional app model weights where implemented |
+| `--skip-package-deps` | Copy/clone optional package apps only; skip apt/pip dependency install |
 | `--models none` | Do not download models |
 | `--models qwen,ornith,mistral` | Download selected models |
 | `--start none` | Do not start services after install |

@@ -1,0 +1,17 @@
+[Unit]
+Description=Un-0 Kuramoto image generator WebUI
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory={{UN0_ROOT}}
+Environment=UN0_ROOT={{UN0_ROOT}}
+Environment=UN0_PORT=7870
+Environment=UN0_PUBLIC_HOST={{PUBLIC_HOST}}
+ExecStart={{UN0_ROOT}}/.venv/bin/python {{UN0_ROOT}}/app.py
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,17 @@
+[Unit]
+Description=Agent3Dify Local Qwen WebUI
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory={{AGENT3DIFY_ROOT}}
+Environment=OPENAI_BASE_URL=http://127.0.0.1:8000/v1
+Environment=OPENAI_API_KEY=local-agent3dify
+Environment=LANGSMITH_TRACING=false
+Environment=PYTHONUNBUFFERED=1
+ExecStart={{AGENT3DIFY_ROOT}}/.venv/bin/python -m uvicorn web.app:app --host 0.0.0.0 --port 7869 --workers 1 --timeout-keep-alive 120
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

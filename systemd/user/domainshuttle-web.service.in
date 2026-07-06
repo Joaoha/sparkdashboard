@@ -1,0 +1,18 @@
+[Unit]
+Description=DomainShuttle WebUI
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory={{DOMAINSHUTTLE_ROOT}}/web
+Environment=DOMAINSHUTTLE_ROOT={{DOMAINSHUTTLE_ROOT}}
+Environment=DOMAINSHUTTLE_PUBLIC_BASE=http://{{PUBLIC_HOST}}:7867
+Environment=HF_HOME={{DOMAINSHUTTLE_ROOT}}/hf-cache
+Environment=VIDEOX_ATTENTION_TYPE=SDPA
+Environment=PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+ExecStart={{DOMAINSHUTTLE_ROOT}}/.venv/bin/python -m uvicorn app:app --host 0.0.0.0 --port 7867 --workers 1 --timeout-keep-alive 120
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

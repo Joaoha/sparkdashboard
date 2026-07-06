@@ -15,13 +15,15 @@ The dashboard is dependency-light Python stdlib. Model serving uses Docker and `
 
 Detailed guide: [Deployment and usage](docs/deployment-and-usage.md)
 
+Optional app packages: [Optional Spark app packages](docs/optional-packages.md)
+
 ## One-command install on a fresh Spark
 
 ```bash
-git clone https://github.com/joaoha/sparkdashboard.git && cd sparkdashboard && ./install.sh --models all --start dashboard
+git clone https://github.com/joaoha/sparkdashboard.git && cd sparkdashboard && ./install.sh --models all --packages all --start dashboard
 ```
 
-This downloads all text model snapshots. They are large: budget roughly 200+ GiB for Qwen, Ornith, and Mistral together.
+Add `--package-models all` if you also want the optional app model weights downloaded in the same run. This is very large; see [Optional Spark app packages](docs/optional-packages.md).
 
 To install the dashboard/services first and download models later:
 
@@ -43,7 +45,8 @@ The installer can install `docker.io` via apt if Docker is missing, but it does 
 
 ## Installed commands
 
-- `sparkdashboard-download-models` — downloads model snapshots using `huggingface_hub`
+- `sparkdashboard-download-models` — downloads text model snapshots using `huggingface_hub`
+- `sparkdashboard-install-packages` — installs optional Spark app packages such as Z-Image, Qwen-Image, FLUX.2, Krea-2, DomainShuttle, Un-0, TripoSplat, Agent3Dify, HiDream, Pixal3D, and PersonaPlex
 - `sparkdashboard-status` — shows model/proxy service state and `/v1/models` probes
 
 ## Service map

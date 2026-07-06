@@ -1,0 +1,16 @@
+[Unit]
+Description=HiDream O1 Image Dev 2604 web app
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory={{HIDREAM_ROOT}}/repo
+Environment=PORT=7861
+Environment=HOST=0.0.0.0
+ExecStart={{HIDREAM_ROOT}}/bin/start-hidream-o1-web.sh
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+
+[Install]
+WantedBy=default.target

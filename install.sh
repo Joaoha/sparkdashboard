@@ -9,6 +9,9 @@ VLLM_IMAGE=${SPARK_VLLM_IMAGE:-vllm/vllm-openai:nightly}
 MODELS=${SPARK_MODELS:-all}
 START=${SPARK_START:-dashboard}
 INSTALL_DOCKER=${SPARK_INSTALL_DOCKER:-auto}
+PACKAGES=${SPARK_PACKAGES:-none}
+PACKAGE_MODELS=${SPARK_PACKAGE_MODELS:-none}
+SKIP_PACKAGE_DEPS=${SPARK_SKIP_PACKAGE_DEPS:-0}
 DRY_RUN=${SPARK_DRY_RUN:-0}
 
 usage() {
@@ -21,6 +24,9 @@ Options:
   --public-host HOST        Default: hostname -f
   --dashboard-port PORT     Default: 7862
   --models LIST             all|none|qwen,ornith,mistral (default: all)
+  --packages LIST           all|none or comma list of optional apps (default: none)
+  --package-models LIST     all|none or comma list; download optional package weights (default: none)
+  --skip-package-deps       Copy/clone optional packages only; skip apt/pip deps
   --start WHAT              none|dashboard|qwen (default: dashboard)
   --skip-model-download     Same as --models none
   --skip-docker-install     Do not attempt Docker installation if docker is missing
@@ -28,7 +34,7 @@ Options:
   -h, --help                Show this help
 
 One-command remote use:
-  git clone https://github.com/joaoha/sparkdashboard.git && cd sparkdashboard && ./install.sh --models all --start dashboard
+  git clone https://github.com/joaoha/sparkdashboard.git && cd sparkdashboard && ./install.sh --models all --packages all --start dashboard
 USAGE
 }
 
@@ -39,6 +45,9 @@ while [ $# -gt 0 ]; do
     --public-host) PUBLIC_HOST="$2"; shift 2 ;;
     --dashboard-port) DASHBOARD_PORT="$2"; shift 2 ;;
     --models) MODELS="$2"; shift 2 ;;
+    --packages) PACKAGES="$2"; shift 2 ;;
+    --package-models) PACKAGE_MODELS="$2"; shift 2 ;;
+    --skip-package-deps) SKIP_PACKAGE_DEPS=1; shift ;;
     --start) START="$2"; shift 2 ;;
     --skip-model-download) MODELS=none; shift ;;
     --skip-docker-install) INSTALL_DOCKER=never; shift ;;
@@ -67,6 +76,8 @@ if [ "$DRY_RUN" = "1" ]; then
   echo "  public host:    $PUBLIC_HOST"
   echo "  dashboard port: $DASHBOARD_PORT"
   echo "  models:         $MODELS"
+  echo "  packages:       $PACKAGES"
+  echo "  package models: $PACKAGE_MODELS"
   echo "  start:          $START"
   tmp=$(mktemp -d)
   python3 - "$REPO_DIR" "$tmp" "$INSTALL_ROOT" "$MODEL_DIR" "$PUBLIC_HOST" "$DASHBOARD_PORT" "$VLLM_IMAGE" <<'PY'
@@ -79,6 +90,17 @@ values = {
     "PUBLIC_HOST": sys.argv[5],
     "DASHBOARD_PORT": sys.argv[6],
     "VLLM_IMAGE": sys.argv[7],
+    "PERSONAPLEX_ROOT": "/opt/personaplex-bnb4",
+    "HIDREAM_ROOT": "/opt/hidream-o1-image-dev-2604",
+    "PIXAL3D_ROOT": "/opt/Pixal3D",
+    "Z_IMAGE_ROOT": "/opt/z-image",
+    "QWEN_IMAGE_ROOT": "/opt/qwen-image",
+    "FLUX2_ROOT": "/opt/flux2",
+    "DOMAINSHUTTLE_ROOT": "/opt/domainshuttle",
+    "KREA2_ROOT": "/opt/krea-2",
+    "AGENT3DIFY_ROOT": "/opt/agent3dify",
+    "UN0_ROOT": "/opt/un0",
+    "TRIPOSPLAT_ROOT": "/opt/triposplat",
 }
 for src in sorted((repo / "systemd/user").glob("*.service.in")):
     text = src.read_text()
@@ -88,9 +110,11 @@ for src in sorted((repo / "systemd/user").glob("*.service.in")):
     dst.write_text(text)
     print(dst)
 PY
-  python3 -m py_compile "$REPO_DIR/app/server.py" "$REPO_DIR/app/no_think_proxy.py" "$REPO_DIR/scripts/download_models.py"
+  python3 -m py_compile "$REPO_DIR/app/server.py" "$REPO_DIR/app/no_think_proxy.py" "$REPO_DIR/scripts/download_models.py" "$REPO_DIR/scripts/install_packages.py" "$REPO_DIR"/packages/*/*.py "$REPO_DIR"/packages/*/*/*.py 2>/dev/null || python3 -m py_compile "$REPO_DIR/app/server.py" "$REPO_DIR/app/no_think_proxy.py" "$REPO_DIR/scripts/download_models.py" "$REPO_DIR/scripts/install_packages.py"
   bash -n "$REPO_DIR/install.sh" "$REPO_DIR"/bin/*.sh "$REPO_DIR/scripts/smoke.sh"
   python3 -m json.tool "$REPO_DIR/config/models.json" >/dev/null
+  python3 -m json.tool "$REPO_DIR/config/packages.json" >/dev/null
+  "$REPO_DIR/scripts/install_packages.py" "$PACKAGES" --dry-run --skip-deps
   rm -rf "$tmp"
   echo "Dry run OK."
   exit 0
@@ -124,16 +148,18 @@ if ! docker info >/dev/null 2>&1; then
 fi
 
 mkdir -p "$HOME/.config/systemd/user" "$MODEL_DIR"
-$SUDO install -d -m 0755 "$INSTALL_ROOT" "$INSTALL_ROOT/app" "$INSTALL_ROOT/bin" "$INSTALL_ROOT/config" "$INSTALL_ROOT/scripts"
+$SUDO install -d -m 0755 "$INSTALL_ROOT" "$INSTALL_ROOT/app" "$INSTALL_ROOT/bin" "$INSTALL_ROOT/config" "$INSTALL_ROOT/scripts" "$INSTALL_ROOT/packages"
 $SUDO cp -R "$REPO_DIR/app/." "$INSTALL_ROOT/app/"
 $SUDO cp -R "$REPO_DIR/bin/." "$INSTALL_ROOT/bin/"
 $SUDO cp -R "$REPO_DIR/config/." "$INSTALL_ROOT/config/"
 $SUDO cp -R "$REPO_DIR/scripts/." "$INSTALL_ROOT/scripts/"
-$SUDO chmod +x "$INSTALL_ROOT/bin/"*.sh "$INSTALL_ROOT/scripts/download_models.py"
+$SUDO cp -R "$REPO_DIR/packages/." "$INSTALL_ROOT/packages/"
+$SUDO chmod +x "$INSTALL_ROOT/bin/"*.sh "$INSTALL_ROOT/scripts/download_models.py" "$INSTALL_ROOT/scripts/install_packages.py"
 $SUDO chown -R root:root "$INSTALL_ROOT" || true
 
 # Convenience command for model downloads.
 $SUDO ln -sf "$INSTALL_ROOT/scripts/download_models.py" /usr/local/bin/sparkdashboard-download-models
+$SUDO ln -sf "$INSTALL_ROOT/scripts/install_packages.py" /usr/local/bin/sparkdashboard-install-packages
 $SUDO ln -sf "$INSTALL_ROOT/bin/status-text-models.sh" /usr/local/bin/sparkdashboard-status
 
 render_unit() {
@@ -149,6 +175,17 @@ values = {
     "PUBLIC_HOST": "$PUBLIC_HOST",
     "DASHBOARD_PORT": "$DASHBOARD_PORT",
     "VLLM_IMAGE": "$VLLM_IMAGE",
+    "PERSONAPLEX_ROOT": "/opt/personaplex-bnb4",
+    "HIDREAM_ROOT": "/opt/hidream-o1-image-dev-2604",
+    "PIXAL3D_ROOT": "/opt/Pixal3D",
+    "Z_IMAGE_ROOT": "/opt/z-image",
+    "QWEN_IMAGE_ROOT": "/opt/qwen-image",
+    "FLUX2_ROOT": "/opt/flux2",
+    "DOMAINSHUTTLE_ROOT": "/opt/domainshuttle",
+    "KREA2_ROOT": "/opt/krea-2",
+    "AGENT3DIFY_ROOT": "/opt/agent3dify",
+    "UN0_ROOT": "/opt/un0",
+    "TRIPOSPLAT_ROOT": "/opt/triposplat",
 }
 for k, v in values.items():
     text = text.replace("{{" + k + "}}", v)
@@ -163,7 +200,21 @@ done
 
 systemctl --user daemon-reload
 systemctl --user enable spark-dashboard.service qwen-no-think-proxy.service ornith-no-think-proxy.service >/dev/null
-# Model services are installed but not enabled: start them from dashboard or manually.
+# Model and optional app services are installed but not enabled by default.
+
+if [ "$PACKAGES" != "none" ]; then
+  pkg_args=("$PACKAGES")
+  if [ "$SKIP_PACKAGE_DEPS" = "1" ]; then pkg_args+=(--skip-deps); fi
+  if [ "$PACKAGE_MODELS" != "none" ]; then
+    # install_packages.py downloads model weights for selected packages; if package-models is narrower, run that second pass.
+    if [ "$PACKAGE_MODELS" = "$PACKAGES" ] || [ "$PACKAGE_MODELS" = "all" ]; then pkg_args+=(--download-models); fi
+  fi
+  "$INSTALL_ROOT/scripts/install_packages.py" "${pkg_args[@]}"
+  if [ "$PACKAGE_MODELS" != "none" ] && [ "$PACKAGE_MODELS" != "$PACKAGES" ] && [ "$PACKAGE_MODELS" != "all" ]; then
+    "$INSTALL_ROOT/scripts/install_packages.py" "$PACKAGE_MODELS" --skip-deps --download-models
+  fi
+  systemctl --user daemon-reload
+fi
 
 if [ "$MODELS" != "none" ]; then
   echo "Preparing Python venv for Hugging Face downloads..."
@@ -193,6 +244,7 @@ Install root:   $INSTALL_ROOT
 Model dir:      $MODEL_DIR
 Status command: sparkdashboard-status
 Download cmd:   sparkdashboard-download-models qwen,ornith,mistral --model-dir "$MODEL_DIR"
+Package cmd:    sparkdashboard-install-packages all --download-models
 
 Installed user services:
   spark-dashboard.service
@@ -201,6 +253,12 @@ Installed user services:
   mistral-medium-vllm.service
   qwen-no-think-proxy.service
   ornith-no-think-proxy.service
+
+Optional app services available with --packages:
+  personaplex.service, hidream-o1.service, pixal3d.service
+  z-image.service, qwen-image.service, flux2.service
+  domainshuttle-web.service, krea-2.service, agent3dify-web.service
+  un0-web.service, triposplat-web.service
 
 Start examples:
   systemctl --user start spark-dashboard.service

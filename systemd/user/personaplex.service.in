@@ -1,0 +1,16 @@
+[Unit]
+Description=PersonaPlex BNB4/NF4 speech-to-speech web server
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory={{PERSONAPLEX_ROOT}}
+Environment=PORT=8998
+Environment=HOST=0.0.0.0
+ExecStart={{PERSONAPLEX_ROOT}}/bin/run-server-bnb4.sh
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+
+[Install]
+WantedBy=default.target

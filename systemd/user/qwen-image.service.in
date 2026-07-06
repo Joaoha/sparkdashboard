@@ -1,0 +1,20 @@
+[Unit]
+Description=Qwen-Image text-to-image UI
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory={{QWEN_IMAGE_ROOT}}
+Environment=QWEN_IMAGE_ROOT={{QWEN_IMAGE_ROOT}}
+Environment=QWEN_IMAGE_MODEL=Qwen/Qwen-Image
+Environment=QWEN_IMAGE_HOST=0.0.0.0
+Environment=QWEN_IMAGE_PORT=7865
+Environment=HF_HOME={{QWEN_IMAGE_ROOT}}/hf-cache
+Environment=HF_HUB_DISABLE_XET=1
+Environment=PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+ExecStart={{QWEN_IMAGE_ROOT}}/.venv/bin/python {{QWEN_IMAGE_ROOT}}/app.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

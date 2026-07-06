@@ -1,0 +1,16 @@
+[Unit]
+Description=TripoSplat WebUI (Spark)
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory={{TRIPOSPLAT_ROOT}}
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONPATH={{TRIPOSPLAT_ROOT}}/repo
+Environment=TRIPOSPLAT_PORT=7871
+ExecStart={{TRIPOSPLAT_ROOT}}/.venv/bin/python -m uvicorn app:app --host 0.0.0.0 --port 7871
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

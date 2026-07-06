@@ -1,0 +1,20 @@
+[Unit]
+Description=Z-Image text-to-image UI
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory={{Z_IMAGE_ROOT}}
+Environment=Z_IMAGE_ROOT={{Z_IMAGE_ROOT}}
+Environment=Z_IMAGE_MODEL=Tongyi-MAI/Z-Image
+Environment=Z_IMAGE_HOST=0.0.0.0
+Environment=Z_IMAGE_PORT=7864
+Environment=HF_HOME={{Z_IMAGE_ROOT}}/hf-cache
+Environment=HF_XET_HIGH_PERFORMANCE=1
+Environment=PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+ExecStart={{Z_IMAGE_ROOT}}/.venv/bin/python {{Z_IMAGE_ROOT}}/app.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

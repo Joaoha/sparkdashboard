@@ -12,11 +12,24 @@ jobs:
         with:
           python-version: '3.12'
       - name: Python syntax
-        run: python -m py_compile app/server.py app/no_think_proxy.py scripts/download_models.py
+        run: |
+          python -m py_compile \
+            app/server.py app/no_think_proxy.py \
+            scripts/download_models.py scripts/install_packages.py \
+            packages/*/*.py packages/*/*/*.py
       - name: Shell syntax
         run: |
           bash -n install.sh
           bash -n bin/*.sh
           bash -n scripts/smoke.sh
-      - name: Validate model manifest
-        run: python -m json.tool config/models.json >/dev/null
+      - name: Validate manifests
+        run: |
+          python -m json.tool config/models.json >/dev/null
+          python -m json.tool config/packages.json >/dev/null
+      - name: Installer dry-run
+        run: |
+          ./install.sh --dry-run --models none --packages all --package-models none --start none \
+            --install-root /tmp/spark-dashboard-test \
+            --model-dir /tmp/spark-models \
+            --public-host spark-test.local \
+            --dashboard-port 17862

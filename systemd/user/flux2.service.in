@@ -1,0 +1,21 @@
+[Unit]
+Description=FLUX.2 bnb-4bit image UI
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory={{FLUX2_ROOT}}
+Environment=FLUX2_ROOT={{FLUX2_ROOT}}
+Environment=FLUX2_MODEL=diffusers/FLUX.2-dev-bnb-4bit
+Environment=FLUX2_HOST=0.0.0.0
+Environment=FLUX2_PORT=7866
+Environment=FLUX2_TEXT_ENCODER_MODE=local_offload
+Environment=HF_HOME={{FLUX2_ROOT}}/hf-cache
+Environment=HF_HUB_DISABLE_XET=1
+Environment=PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+ExecStart={{FLUX2_ROOT}}/.venv/bin/python {{FLUX2_ROOT}}/app.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

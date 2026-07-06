@@ -1,0 +1,17 @@
+[Unit]
+Description=Krea-2 Turbo WebUI
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory={{KREA2_ROOT}}
+Environment=KREA2_ROOT={{KREA2_ROOT}}
+Environment=KREA2_PUBLIC_BASE=http://{{PUBLIC_HOST}}:7868
+Environment=HF_HOME={{KREA2_ROOT}}/hf-cache
+Environment=PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+ExecStart={{KREA2_ROOT}}/.venv/bin/python -m uvicorn app:app --host 0.0.0.0 --port 7868 --workers 1 --timeout-keep-alive 120
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

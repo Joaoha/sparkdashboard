@@ -1,0 +1,113 @@
+{
+  "packages": {
+    "personaplex": {
+      "name": "PersonaPlex BNB4 speech-to-speech",
+      "service": "personaplex.service",
+      "port": 8998,
+      "root": "/opt/personaplex-bnb4",
+      "kind": "hf_git",
+      "repo": "https://huggingface.co/brianmatzelle/personaplex-7b-v1-bnb-4bit",
+      "estimated_disk_gib": 18,
+      "notes": "Gated/large speech model; requires Hugging Face auth and model access."
+    },
+    "hidream": {
+      "name": "HiDream O1 Image Dev 2604",
+      "service": "hidream-o1.service",
+      "port": 7861,
+      "root": "/opt/hidream-o1-image-dev-2604",
+      "kind": "git_model",
+      "repo": "https://github.com/HiDream-ai/HiDream-O1-Image.git",
+      "branch": "dev",
+      "model_repo": "HiDream-ai/HiDream-O1-Image-Dev-2604",
+      "estimated_disk_gib": 39
+    },
+    "pixal3d": {
+      "name": "Pixal3D",
+      "service": "pixal3d.service",
+      "port": 7863,
+      "root": "/opt/Pixal3D",
+      "kind": "git_complex",
+      "repo": "https://github.com/TencentARC/Pixal3D.git",
+      "branch": "master",
+      "estimated_disk_gib": 29,
+      "notes": "Requires TRELLIS.2 native extension build; installer installs base repo/service and prints follow-up build guidance."
+    },
+    "z-image": {
+      "name": "Z-Image",
+      "service": "z-image.service",
+      "port": 7864,
+      "root": "/opt/z-image",
+      "kind": "bundled_diffusers_app",
+      "model_repo": "Tongyi-MAI/Z-Image",
+      "estimated_disk_gib": 25
+    },
+    "qwen-image": {
+      "name": "Qwen-Image",
+      "service": "qwen-image.service",
+      "port": 7865,
+      "root": "/opt/qwen-image",
+      "kind": "bundled_diffusers_app",
+      "model_repo": "Qwen/Qwen-Image",
+      "estimated_disk_gib": 59
+    },
+    "flux2": {
+      "name": "FLUX.2",
+      "service": "flux2.service",
+      "port": 7866,
+      "root": "/opt/flux2",
+      "kind": "bundled_diffusers_app",
+      "model_repo": "diffusers/FLUX.2-dev-bnb-4bit",
+      "estimated_disk_gib": 37,
+      "notes": "May require Hugging Face token for gated/remote text encoder paths."
+    },
+    "domainshuttle": {
+      "name": "DomainShuttle",
+      "service": "domainshuttle-web.service",
+      "port": 7867,
+      "root": "/opt/domainshuttle",
+      "kind": "git_plus_bundled_web",
+      "repo": "https://github.com/HKUST-C4G/DomainShuttle.git",
+      "model_repos": [
+        "CNcreator0331/DomainShuttle_weight",
+        "Wan-AI/Wan2.2-T2V-A14B"
+      ],
+      "estimated_disk_gib": 94
+    },
+    "krea2": {
+      "name": "Krea-2 Turbo",
+      "service": "krea-2.service",
+      "port": 7868,
+      "root": "/opt/krea-2",
+      "kind": "bundled_diffusers_app",
+      "model_repo": "krea/Krea-2-Turbo",
+      "estimated_disk_gib": 63
+    },
+    "agent3dify": {
+      "name": "Agent3Dify",
+      "service": "agent3dify-web.service",
+      "port": 7869,
+      "root": "/opt/agent3dify",
+      "kind": "git_plus_bundled_web",
+      "repo": "https://github.com/neka-nat/agent3dify.git",
+      "estimated_disk_gib": 2
+    },
+    "un0": {
+      "name": "Un-0 Kuramoto",
+      "service": "un0-web.service",
+      "port": 7870,
+      "root": "/opt/un0",
+      "kind": "git_plus_bundled_web",
+      "repo": "https://github.com/unconv-ai/Un-0.git",
+      "estimated_disk_gib": 4
+    },
+    "triposplat": {
+      "name": "TripoSplat",
+      "service": "triposplat-web.service",
+      "port": 7871,
+      "root": "/opt/triposplat",
+      "kind": "git_plus_bundled_web",
+      "repo": "https://github.com/VAST-AI-Research/TripoSplat.git",
+      "estimated_disk_gib": 4
+    }
+  }
+}
