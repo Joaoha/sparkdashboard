@@ -1,0 +1,17 @@
+[Unit]
+Description=Qwen vLLM no-think OpenAI-compatible proxy
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory={{INSTALL_ROOT}}
+Environment=VLLM_PROXY_NAME=qwen-no-think-proxy
+Environment=VLLM_PROXY_HOST=0.0.0.0
+Environment=VLLM_PROXY_PORT=8010
+Environment=VLLM_PROXY_UPSTREAM=http://127.0.0.1:8000
+ExecStart=/usr/bin/python3 {{INSTALL_ROOT}}/app/no_think_proxy.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

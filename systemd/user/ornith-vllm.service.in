@@ -1,0 +1,19 @@
+[Unit]
+Description=Ornith-1.0-35B vLLM OpenAI-compatible server
+After=network-online.target docker.service
+Conflicts=qwen-nvfp4-vllm.service mistral-medium-vllm.service
+
+[Service]
+Type=simple
+WorkingDirectory={{INSTALL_ROOT}}
+Environment=SPARK_MODEL_DIR={{MODEL_DIR}}
+Environment=SPARK_VLLM_IMAGE={{VLLM_IMAGE}}
+ExecStart={{INSTALL_ROOT}}/bin/ornith-vllm.sh
+ExecStop=-/usr/bin/docker stop ornith-vllm
+Restart=on-failure
+RestartSec=15
+TimeoutStartSec=1200
+TimeoutStopSec=90
+
+[Install]
+WantedBy=default.target

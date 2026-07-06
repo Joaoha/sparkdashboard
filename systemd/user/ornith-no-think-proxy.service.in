@@ -1,0 +1,17 @@
+[Unit]
+Description=Ornith vLLM no-think OpenAI-compatible proxy
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory={{INSTALL_ROOT}}
+Environment=VLLM_PROXY_NAME=ornith-no-think-proxy
+Environment=VLLM_PROXY_HOST=0.0.0.0
+Environment=VLLM_PROXY_PORT=8011
+Environment=VLLM_PROXY_UPSTREAM=http://127.0.0.1:8001
+ExecStart=/usr/bin/python3 {{INSTALL_ROOT}}/app/no_think_proxy.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

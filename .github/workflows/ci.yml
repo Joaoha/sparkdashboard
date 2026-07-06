@@ -1,0 +1,22 @@
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Python syntax
+        run: python -m py_compile app/server.py app/no_think_proxy.py scripts/download_models.py
+      - name: Shell syntax
+        run: |
+          bash -n install.sh
+          bash -n bin/*.sh
+          bash -n scripts/smoke.sh
+      - name: Validate model manifest
+        run: python -m json.tool config/models.json >/dev/null

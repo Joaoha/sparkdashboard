@@ -1,0 +1,17 @@
+[Unit]
+Description=Spark Dashboard
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory={{INSTALL_ROOT}}
+Environment=SPARK_DASHBOARD_ROOT={{INSTALL_ROOT}}
+Environment=SPARK_DASHBOARD_HOST=0.0.0.0
+Environment=SPARK_DASHBOARD_PORT={{DASHBOARD_PORT}}
+Environment=SPARK_PUBLIC_HOST={{PUBLIC_HOST}}
+ExecStart=/usr/bin/python3 {{INSTALL_ROOT}}/app/server.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

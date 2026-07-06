@@ -1,0 +1,19 @@
+[Unit]
+Description=Mistral Medium 3.5 128B NVFP4 vLLM OpenAI-compatible server
+After=network-online.target docker.service
+Conflicts=qwen-nvfp4-vllm.service ornith-vllm.service
+
+[Service]
+Type=simple
+WorkingDirectory={{INSTALL_ROOT}}
+Environment=SPARK_MODEL_DIR={{MODEL_DIR}}
+Environment=SPARK_VLLM_IMAGE={{VLLM_IMAGE}}
+ExecStart={{INSTALL_ROOT}}/bin/mistral-medium-vllm.sh
+ExecStop=-/usr/bin/docker stop mistral-medium-vllm
+Restart=on-failure
+RestartSec=15
+TimeoutStartSec=1800
+TimeoutStopSec=120
+
+[Install]
+WantedBy=default.target

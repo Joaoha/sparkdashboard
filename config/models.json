@@ -1,0 +1,32 @@
+{
+  "models": {
+    "qwen": {
+      "repo_id": "nvidia/Qwen3.6-35B-A3B-NVFP4",
+      "local_name": "Qwen3.6-35B-A3B-NVFP4",
+      "port": 8000,
+      "proxy_port": 8010,
+      "service": "qwen-nvfp4-vllm.service",
+      "proxy_service": "qwen-no-think-proxy.service",
+      "estimated_disk_gib": 24,
+      "description": "Qwen 3.6 35B A3B NVFP4 vLLM service"
+    },
+    "ornith": {
+      "repo_id": "deepreinforce-ai/Ornith-1.0-35B",
+      "local_name": "Ornith-1.0-35B",
+      "port": 8001,
+      "proxy_port": 8011,
+      "service": "ornith-vllm.service",
+      "proxy_service": "ornith-no-think-proxy.service",
+      "estimated_disk_gib": 66,
+      "description": "Ornith 1.0 35B BF16 vLLM service"
+    },
+    "mistral": {
+      "repo_id": "nvidia/Mistral-Medium-3.5-128B-NVFP4",
+      "local_name": "Mistral-Medium-3.5-128B-NVFP4",
+      "port": 8002,
+      "service": "mistral-medium-vllm.service",
+      "estimated_disk_gib": 90,
+      "description": "Mistral Medium 3.5 128B NVFP4 vLLM service"
+    }
+  }
+}
