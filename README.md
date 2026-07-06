@@ -13,6 +13,8 @@ It installs:
 
 The dashboard is dependency-light Python stdlib. Model serving uses Docker and `vllm/vllm-openai:nightly`.
 
+Detailed guide: [Deployment and usage](docs/deployment-and-usage.md)
+
 ## One-command install on a fresh Spark
 
 ```bash
@@ -73,7 +75,7 @@ Use these providers in OpenCode if you also configure OpenCode against this Spar
 ./install.sh \
   --install-root /opt/spark-dashboard \
   --model-dir /home/$USER/models/hf \
-  --public-host spark-d276.local \
+  --public-host my-spark.local \
   --dashboard-port 7862 \
   --models qwen,ornith,mistral \
   --start dashboard
