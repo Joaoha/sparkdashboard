@@ -46,7 +46,7 @@ The installer can install `docker.io` via apt if Docker is missing, but it does 
 ## Installed commands
 
 - `sparkdashboard-download-models` — downloads text model snapshots using `huggingface_hub`
-- `sparkdashboard-install-packages` — installs optional Spark app packages such as Z-Image, Qwen-Image, FLUX.2, Krea-2, DomainShuttle, Un-0, TripoSplat, Agent3Dify, HiDream, Pixal3D, and PersonaPlex
+- `sparkdashboard-install-packages` — installs optional Spark app packages such as Z-Image, Qwen-Image, FLUX.2, Krea-2, DomainShuttle, Un-0, TripoSplat, Agent3Dify, HiDream, Pixal3D, and PersonaPlex. Use `sparkdashboard-install-packages pixal3d --build-pixal3d-trellis` for Pixal3D's full TRELLIS.2 extension build.
 - `sparkdashboard-status` — shows model/proxy service state and `/v1/models` probes
 
 ## Service map

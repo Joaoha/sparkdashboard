@@ -36,7 +36,7 @@ sparkdashboard-install-packages z-image,qwen-image,flux2,krea2 --skip-deps --dow
 |---|---|---:|---|
 | `personaplex` | `personaplex.service` | 8998 | BNB4/NF4 speech-to-speech; Hugging Face auth may be required |
 | `hidream` | `hidream-o1.service` | 7861 | HiDream O1 image app, branch `dev`, CUDA 13 PyTorch |
-| `pixal3d` | `pixal3d.service` | 7863 | Pixal3D; base installer does not build all TRELLIS.2 native extensions |
+| `pixal3d` | `pixal3d.service` | 7863 | Pixal3D; add `--build-pixal3d-trellis` to build TRELLIS.2 native extensions |
 | `z-image` | `z-image.service` | 7864 | Bundled Spark FastAPI wrapper for `Tongyi-MAI/Z-Image` |
 | `qwen-image` | `qwen-image.service` | 7865 | Bundled Spark FastAPI wrapper for `Qwen/Qwen-Image` |
 | `flux2` | `flux2.service` | 7866 | Bundled Spark FastAPI wrapper for FLUX.2 bnb-4bit; may need HF auth |
@@ -79,6 +79,18 @@ Install apps, deps, and model weights:
 sparkdashboard-install-packages z-image,qwen-image --download-models
 ```
 
+Install Pixal3D with full TRELLIS.2 native CUDA extension build:
+
+```bash
+sparkdashboard-install-packages pixal3d --build-pixal3d-trellis
+```
+
+Or through the top-level installer:
+
+```bash
+./install.sh --skip-model-download --packages pixal3d --build-pixal3d-trellis --start dashboard
+```
+
 Dry-run all packages:
 
 ```bash
@@ -106,7 +118,7 @@ Use the dashboard at `http://<spark-host>:7862` to start/stop many of these thro
 ## Important caveats
 
 - These optional packages are much heavier and less uniform than the text LLM stack. Some are upstream research repos with native CUDA extensions.
-- Pixal3D needs the TRELLIS.2 extension build for full generation. The package installer installs the repo, service, venv, and base Python dependencies, but the full native build may still require the dedicated Pixal3D runbook steps.
+- Pixal3D full generation needs the TRELLIS.2 extension build. It is opt-in with `--build-pixal3d-trellis` because it clones `microsoft/TRELLIS.2`, builds native CUDA extensions from source, and can take a long time.
 - PersonaPlex and FLUX.2 may require Hugging Face login/access. Run `huggingface-cli login` on the target Spark before downloading gated assets.
 - Do not run every heavy app simultaneously. Most image/video apps should be treated as on-demand services.
 - The bundled FastAPI wrappers intentionally store generated images/jobs under each `/opt/<package>/outputs` or `/opt/<package>/jobs` directory.

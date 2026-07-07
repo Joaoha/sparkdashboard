@@ -173,6 +173,7 @@ Installer options:
 | `--packages all` | Install all optional Spark app package scaffolding/dependencies |
 | `--package-models all` | Also download optional app model weights where implemented |
 | `--skip-package-deps` | Copy/clone optional package apps only; skip apt/pip dependency install |
+| `--build-pixal3d-trellis` | With `--packages pixal3d`, build TRELLIS.2 CUDA extensions from source |
 | `--models none` | Do not download models |
 | `--models qwen,ornith,mistral` | Download selected models |
 | `--start none` | Do not start services after install |

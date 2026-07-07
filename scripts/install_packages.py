@@ -88,14 +88,18 @@ def install_torch(py: Path, *, dry_run: bool) -> None:
     run([str(py), "-m", "pip", "install", "--index-url", "https://download.pytorch.org/whl/cu130", "torch", "torchvision", "torchaudio"], dry_run=dry_run)
 
 
-def clone_repo(url: str, dest: Path, branch: str | None, *, dry_run: bool) -> None:
+def clone_repo(url: str, dest: Path, branch: str | None, *, dry_run: bool, recursive: bool = False) -> None:
     if dest.exists() and (dest / ".git").exists():
         run(["git", "fetch", "--depth", "1", "origin"], cwd=dest, dry_run=dry_run)
         if branch:
             run(["git", "checkout", branch], cwd=dest, dry_run=dry_run)
             run(["git", "pull", "--ff-only", "origin", branch], cwd=dest, dry_run=dry_run)
+        if recursive:
+            run(["git", "submodule", "update", "--init", "--recursive"], cwd=dest, dry_run=dry_run)
         return
     cmd = ["git", "clone", "--depth", "1"]
+    if recursive:
+        cmd.append("--recursive")
     if branch:
         cmd += ["--branch", branch]
     cmd += [url, str(dest)]
@@ -153,7 +157,53 @@ def download_snapshot(py: Path, repo_id: str, local_dir: Path | None = None, cac
     run([str(py), "-c", code], dry_run=dry_run, env={**os.environ, "HF_HUB_ENABLE_HF_TRANSFER": "1"})
 
 
-def install_package(key: str, *, download_models: bool, skip_deps: bool, dry_run: bool) -> None:
+
+def build_pixal3d_trellis(pixal_root: Path, py: Path, *, dry_run: bool) -> None:
+    """Build TRELLIS.2 native CUDA extensions for Pixal3D on Spark/GB10.
+
+    This is intentionally opt-in because it is a long source build and depends
+    on the target's CUDA/toolchain state. It follows the known-good Spark ARM64
+    runbook: CUDA 13, GB10 sm_121, SDPA instead of flash-attn.
+    """
+    trellis_root = Path(os.environ.get("PIXAL3D_TRELLIS_ROOT", "/opt/TRELLIS.2"))
+    ensure_owned_dir(trellis_root, dry_run=dry_run)
+    clone_repo("https://github.com/microsoft/TRELLIS.2.git", trellis_root, None, dry_run=dry_run, recursive=True)
+
+    build_env = {
+        **os.environ,
+        "PATH": f"/usr/local/cuda-13.0/bin:{os.environ.get('PATH', '')}",
+        "CUDA_HOME": os.environ.get("CUDA_HOME", "/usr/local/cuda-13.0"),
+        "TORCH_CUDA_ARCH_LIST": os.environ.get("TORCH_CUDA_ARCH_LIST", "12.1"),
+        "NATTEN_CUDA_ARCH": os.environ.get("NATTEN_CUDA_ARCH", "12.1"),
+        "NATTEN_N_WORKERS": os.environ.get("NATTEN_N_WORKERS", "4"),
+        "MAX_JOBS": os.environ.get("MAX_JOBS", "4"),
+        "CMAKE_BUILD_PARALLEL_LEVEL": os.environ.get("CMAKE_BUILD_PARALLEL_LEVEL", "4"),
+        "ATTN_BACKEND": os.environ.get("ATTN_BACKEND", "sdpa"),
+    }
+
+    # Pixal3D upstream expects this utility wheel; install it before the native
+    # extension build so app startup does not force-reinstall it every time.
+    run([
+        str(py), "-m", "pip", "install",
+        "https://github.com/LDYang694/Storages/releases/download/20260430/utils3d-0.0.2-py3-none-any.whl",
+    ], dry_run=dry_run, env=build_env)
+
+    run([str(py), "-m", "pip", "install", "natten==0.21.0", "--no-build-isolation"], dry_run=dry_run, env=build_env)
+    run(["bash", "-lc", f"source {pixal_root}/.venv/bin/activate && ./setup.sh --nvdiffrast --nvdiffrec --cumesh --o-voxel --flexgemm"], cwd=trellis_root, dry_run=dry_run, env=build_env)
+
+    verify = """
+import importlib.util, sys, torch
+mods = ["natten", "nvdiffrast", "nvdiffrec_render", "cumesh", "flex_gemm", "o_voxel", "spaces", "gradio"]
+print("torch", torch.__version__, "cuda", torch.version.cuda, "available", torch.cuda.is_available())
+missing = [m for m in mods if importlib.util.find_spec(m) is None]
+for m in mods:
+    print(m, "ok" if importlib.util.find_spec(m) else "missing")
+if missing:
+    raise SystemExit("Missing Pixal3D/TRELLIS modules: " + ", ".join(missing))
+"""
+    run([str(py), "-c", verify], dry_run=dry_run, env=build_env)
+
+def install_package(key: str, *, download_models: bool, skip_deps: bool, build_pixal3d_trellis_flag: bool, dry_run: bool) -> None:
     meta = MANIFEST[key]
     root = Path(meta["root"])
     print(f"\n== Installing optional package: {key} ({meta['name']}) ==")
@@ -209,12 +259,15 @@ def install_package(key: str, *, download_models: bool, skip_deps: bool, dry_run
         clone_repo(meta["repo"], root, meta.get("branch"), dry_run=dry_run)
         if not skip_deps:
             run(["apt-get", "update", "-qq"], sudo=True, dry_run=dry_run)
-            run(["apt-get", "install", "-y", "cmake", "ninja-build", "python3.12-venv", "libx11-dev", "libegl1-mesa-dev", "libgl1-mesa-dev", "libxext-dev"], sudo=True, dry_run=dry_run)
+            run(["apt-get", "install", "-y", "git", "cmake", "ninja-build", "build-essential", "python3.12-venv", "libx11-dev", "libegl1-mesa-dev", "libgl1-mesa-dev", "libxext-dev"], sudo=True, dry_run=dry_run)
             install_torch(py, dry_run=dry_run)
             req = root / "requirements.txt"
             if req.exists() or dry_run:
                 run([str(py), "-m", "pip", "install", "-r", str(req), "spaces", "nest_asyncio"], dry_run=dry_run)
-        print("NOTE: Pixal3D still requires TRELLIS.2 native extension build for full generation. See docs/optional-packages.md.")
+        if build_pixal3d_trellis_flag:
+            build_pixal3d_trellis(root, py, dry_run=dry_run)
+        else:
+            print("NOTE: Pixal3D TRELLIS.2 native extension build was not requested. Re-run with --build-pixal3d-trellis for full generation support.")
 
     elif kind == "git_plus_bundled_web":
         clone_repo(meta["repo"], root / "repo", meta.get("branch"), dry_run=dry_run)
@@ -244,14 +297,17 @@ def main() -> int:
     ap.add_argument("packages", nargs="?", default="none", help="all, none, or comma list")
     ap.add_argument("--download-models", action="store_true", help="also download package model weights where implemented")
     ap.add_argument("--skip-deps", action="store_true", help="copy/clone apps only; do not pip/apt install")
+    ap.add_argument("--build-pixal3d-trellis", action="store_true", help="when installing pixal3d, also clone/build TRELLIS.2 native CUDA extensions")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
     selected = parse_selection(args.packages)
     if not selected:
         print("No optional packages selected.")
         return 0
+    if args.build_pixal3d_trellis and "pixal3d" not in selected:
+        raise SystemExit("--build-pixal3d-trellis requires selecting the pixal3d package")
     for key in selected:
-        install_package(key, download_models=args.download_models, skip_deps=args.skip_deps, dry_run=args.dry_run)
+        install_package(key, download_models=args.download_models, skip_deps=args.skip_deps, build_pixal3d_trellis_flag=args.build_pixal3d_trellis, dry_run=args.dry_run)
     print("\nOptional package install step complete. Units are installed by install.sh; start services with systemctl --user start <unit>.")
     return 0
 

@@ -12,6 +12,7 @@ INSTALL_DOCKER=${SPARK_INSTALL_DOCKER:-auto}
 PACKAGES=${SPARK_PACKAGES:-none}
 PACKAGE_MODELS=${SPARK_PACKAGE_MODELS:-none}
 SKIP_PACKAGE_DEPS=${SPARK_SKIP_PACKAGE_DEPS:-0}
+BUILD_PIXAL3D_TRELLIS=${SPARK_BUILD_PIXAL3D_TRELLIS:-0}
 DRY_RUN=${SPARK_DRY_RUN:-0}
 
 usage() {
@@ -27,6 +28,7 @@ Options:
   --packages LIST           all|none or comma list of optional apps (default: none)
   --package-models LIST     all|none or comma list; download optional package weights (default: none)
   --skip-package-deps       Copy/clone optional packages only; skip apt/pip deps
+  --build-pixal3d-trellis   When installing Pixal3D, also build TRELLIS.2 CUDA extensions
   --start WHAT              none|dashboard|qwen (default: dashboard)
   --skip-model-download     Same as --models none
   --skip-docker-install     Do not attempt Docker installation if docker is missing
@@ -48,6 +50,7 @@ while [ $# -gt 0 ]; do
     --packages) PACKAGES="$2"; shift 2 ;;
     --package-models) PACKAGE_MODELS="$2"; shift 2 ;;
     --skip-package-deps) SKIP_PACKAGE_DEPS=1; shift ;;
+    --build-pixal3d-trellis) BUILD_PIXAL3D_TRELLIS=1; shift ;;
     --start) START="$2"; shift 2 ;;
     --skip-model-download) MODELS=none; shift ;;
     --skip-docker-install) INSTALL_DOCKER=never; shift ;;
@@ -78,6 +81,7 @@ if [ "$DRY_RUN" = "1" ]; then
   echo "  models:         $MODELS"
   echo "  packages:       $PACKAGES"
   echo "  package models: $PACKAGE_MODELS"
+  echo "  pixal3d trellis:$BUILD_PIXAL3D_TRELLIS"
   echo "  start:          $START"
   tmp=$(mktemp -d)
   python3 - "$REPO_DIR" "$tmp" "$INSTALL_ROOT" "$MODEL_DIR" "$PUBLIC_HOST" "$DASHBOARD_PORT" "$VLLM_IMAGE" <<'PY'
@@ -114,7 +118,9 @@ PY
   bash -n "$REPO_DIR/install.sh" "$REPO_DIR"/bin/*.sh "$REPO_DIR/scripts/smoke.sh"
   python3 -m json.tool "$REPO_DIR/config/models.json" >/dev/null
   python3 -m json.tool "$REPO_DIR/config/packages.json" >/dev/null
-  "$REPO_DIR/scripts/install_packages.py" "$PACKAGES" --dry-run --skip-deps
+  dry_pkg_args=("$PACKAGES" --dry-run --skip-deps)
+  if [ "$BUILD_PIXAL3D_TRELLIS" = "1" ]; then dry_pkg_args+=(--build-pixal3d-trellis); fi
+  "$REPO_DIR/scripts/install_packages.py" "${dry_pkg_args[@]}"
   rm -rf "$tmp"
   echo "Dry run OK."
   exit 0
@@ -205,6 +211,7 @@ systemctl --user enable spark-dashboard.service qwen-no-think-proxy.service orni
 if [ "$PACKAGES" != "none" ]; then
   pkg_args=("$PACKAGES")
   if [ "$SKIP_PACKAGE_DEPS" = "1" ]; then pkg_args+=(--skip-deps); fi
+  if [ "$BUILD_PIXAL3D_TRELLIS" = "1" ]; then pkg_args+=(--build-pixal3d-trellis); fi
   if [ "$PACKAGE_MODELS" != "none" ]; then
     # install_packages.py downloads model weights for selected packages; if package-models is narrower, run that second pass.
     if [ "$PACKAGE_MODELS" = "$PACKAGES" ] || [ "$PACKAGE_MODELS" = "all" ]; then pkg_args+=(--download-models); fi
@@ -245,6 +252,7 @@ Model dir:      $MODEL_DIR
 Status command: sparkdashboard-status
 Download cmd:   sparkdashboard-download-models qwen,ornith,mistral --model-dir "$MODEL_DIR"
 Package cmd:    sparkdashboard-install-packages all --download-models
+Pixal3D full:   sparkdashboard-install-packages pixal3d --build-pixal3d-trellis
 
 Installed user services:
   spark-dashboard.service

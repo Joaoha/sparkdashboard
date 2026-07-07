@@ -33,3 +33,8 @@ jobs:
             --model-dir /tmp/spark-models \
             --public-host spark-test.local \
             --dashboard-port 17862
+          ./install.sh --dry-run --models none --packages pixal3d --build-pixal3d-trellis --start none \
+            --install-root /tmp/spark-dashboard-test \
+            --model-dir /tmp/spark-models \
+            --public-host spark-test.local \
+            --dashboard-port 17862
