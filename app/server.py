@@ -502,6 +502,16 @@ HTML = r'''<!doctype html>
     .bar.info span { background:var(--info); box-shadow:0 0 20px rgba(95,211,255,.18); }
     .bar.warn span { background:var(--warn); box-shadow:0 0 20px rgba(255,179,92,.18); }
     code { font-family:'IBM Plex Mono'; color:var(--text-muted); font-size:12px; }
+
+    .vllm-chat-panel { display:block; scroll-margin-top:24px; }
+    .vllm-chat-panel.active { display:block; }
+    .vllm-chat-log { min-height:180px; max-height:420px; overflow:auto; padding:14px; border:1px solid rgba(255,255,255,.08); border-radius:18px; background:rgba(0,0,0,.22); white-space:pre-wrap; }
+    .vllm-chat-msg { margin:0 0 14px; }
+    .vllm-chat-role { font-family:'IBM Plex Mono'; color:var(--accent); font-size:11px; letter-spacing:.12em; text-transform:uppercase; margin-bottom:4px; }
+    .vllm-chat-content { color:var(--text); line-height:1.55; }
+    .vllm-chat-input { width:100%; min-height:96px; resize:vertical; box-sizing:border-box; margin-top:12px; border:1px solid rgba(255,255,255,.10); border-radius:16px; background:rgba(0,0,0,.28); color:var(--text); padding:14px; font:14px/1.45 'IBM Plex Mono', monospace; }
+    .vllm-chat-row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:10px; }
+    .vllm-chat-status { color:var(--text-muted); font-family:'IBM Plex Mono'; font-size:12px; }
     @media (max-width:1200px) {
       .shell { grid-template-columns:1fr; }
       aside { position:relative; height:auto; display:flex; align-items:center; justify-content:space-between; }
@@ -521,6 +531,7 @@ HTML = r'''<!doctype html>
       <nav>
         <a class="navitem active" href="#overview">// OVERVIEW</a>
         <a class="navitem" href="#services">// SERVICES</a>
+        <a class="navitem" href="#vllm-chat-card">// VLLM CHAT</a>
         <a class="navitem" href="#frontends">// FRONTENDS</a>
         <a class="navitem" href="#benchmarks">// BENCHMARKS</a>
         <a class="navitem" href="#telemetry">// TELEMETRY</a>
@@ -560,6 +571,17 @@ HTML = r'''<!doctype html>
             <div class="console"><span style="color:var(--accent);">&gt;</span><span id="control-result">Ready. Start/stop buttons call a fixed allow-list on Spark.</span><span class="caret"></span></div>
           </div>
 
+          <div class="card vllm-chat-panel" id="vllm-chat-card">
+            <div class="panel-title"><h2>vLLM chat</h2><div class="label" id="vllm-chat-label">TEXT MODEL TOOL</div></div>
+            <div class="sub" id="vllm-chat-sub">Open this from a text-model card. The dashboard proxy calls the selected service's OpenAI-compatible /v1/chat/completions endpoint and ignores reasoning fields.</div>
+            <div class="vllm-chat-log" id="vllm-chat-log"><div class="sub">No chat selected yet.</div></div>
+            <textarea class="vllm-chat-input" id="vllm-chat-input" placeholder="Ask the selected vLLM text model... Shift+Enter for newline, Enter to send."></textarea>
+            <div class="vllm-chat-row">
+              <button class="small-link" id="vllm-chat-send">SEND</button>
+              <button class="small-link" id="vllm-chat-clear">CLEAR</button>
+              <span class="vllm-chat-status" id="vllm-chat-status">Idle.</span>
+            </div>
+          </div>
 
 
           <div class="card" id="benchmarks">
@@ -679,6 +701,7 @@ HTML = r'''<!doctype html>
     function healthText(s){ if(s.health && s.health.ok) return 'ONLINE'; if(s.systemd_state === 'active') return 'NO ENDPOINT'; return 'OFFLINE'; }
 
     const unloadableServices = new Set(['hidream','zimage','qwenimage','flux2','krea2']);
+    const textModelServices = new Set(['qwen','ornith','mistralmedium','nemotronsuper']);
 
     function serviceShell(key){
       return `<article class="card service-card" id="svc-${key}">
@@ -695,6 +718,7 @@ HTML = r'''<!doctype html>
         <div class="links">
           <a class="small-link" data-field="open" target="_blank" rel="noopener">OPEN UI</a>
           <button class="small-link" data-load="${key}">DOCK</button>
+          ${textModelServices.has(key) ? `<button class="small-link" data-chat="${key}">VLLM CHAT</button>` : ''}
           <a class="small-link" data-field="health-link" target="_blank" rel="noopener">HEALTH</a>
         </div>
         <div class="links" style="margin-top:10px;">
@@ -719,6 +743,7 @@ HTML = r'''<!doctype html>
       if (root.dataset.initialized !== '1') {
         root.innerHTML = serviceOrder.map(serviceShell).join('');
         root.querySelectorAll('[data-load]').forEach(btn => btn.addEventListener('click', () => loadFrame(btn.dataset.load)));
+        root.querySelectorAll('[data-chat]').forEach(btn => btn.addEventListener('click', () => openVllmChat(btn.dataset.chat)));
         root.querySelectorAll('[data-action]').forEach(btn => btn.addEventListener('click', () => runControl(btn.dataset.service, btn.dataset.action, btn)));
         root.dataset.initialized = '1';
       }
@@ -785,6 +810,93 @@ HTML = r'''<!doctype html>
         return `<table class="bench-table"><thead><tr><th>#</th><th>Model</th><th>Best tok/s</th><th>Avg tok/s</th><th>Best TTFT</th><th>Avg prefill</th><th>Runs</th><th>Latest</th></tr></thead><tbody>${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${safe(r.model)}</td><td class="metric">${num2(r.best_tokens_per_sec)}</td><td>${num2(r.avg_tokens_per_sec)}</td><td>${sec(r.best_time_to_first_token_sec)}</td><td>${sec(r.avg_prompt_preprocess_sec)}</td><td>${r.runs}</td><td>${new Date((r.latest_timestamp||0)*1000).toLocaleString()}</td></tr>`).join('')}</tbody></table>`;
       }
       return `<table class="bench-table"><thead><tr><th>When</th><th>Service</th><th>Model</th><th>Tok/s</th><th>Decode tok/s</th><th>TTFT</th><th>Prefill</th><th>Queue</th><th>Tokens</th><th>Duration</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${new Date((r.timestamp||0)*1000).toLocaleString()}</td><td>${safe(r.service)}</td><td>${safe(r.model)}</td><td class="metric">${num2(r.tokens_per_sec)}</td><td>${num2(r.decode_tokens_per_sec)}</td><td>${sec(r.time_to_first_token_sec)}</td><td>${sec(r.prompt_preprocess_sec)}</td><td>${sec(r.queue_time_sec)}</td><td>${safe(r.completion_tokens)}</td><td>${Number(r.duration_sec||0).toFixed(2)}s</td></tr>`).join('')}</tbody></table>`;
+    }
+
+
+    let vllmChatService = null;
+    let vllmChatMessages = [];
+
+    function appendVllmChat(role, content){
+      const log = document.getElementById('vllm-chat-log');
+      if (!log) return;
+      if (log.querySelector('.sub')) log.innerHTML = '';
+      const item = document.createElement('div');
+      item.className = 'vllm-chat-msg';
+      const r = document.createElement('div');
+      r.className = 'vllm-chat-role';
+      r.textContent = role;
+      const c = document.createElement('div');
+      c.className = 'vllm-chat-content';
+      c.textContent = content || '[no visible content]';
+      item.appendChild(r);
+      item.appendChild(c);
+      log.appendChild(item);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function openVllmChat(service){
+      if(!textModelServices.has(service)) return;
+      vllmChatService = service;
+      vllmChatMessages = [];
+      const card = document.getElementById('vllm-chat-card');
+      const label = document.getElementById('vllm-chat-label');
+      const sub = document.getElementById('vllm-chat-sub');
+      const sName = document.querySelector(`#svc-${service} [data-field="name"]`)?.textContent || service;
+      if(card) card.classList.add('active');
+      if(label) label.textContent = `SERVICE: ${service}`;
+      if(sub) sub.textContent = `${sName} via ${sameHostUrl(service, 'health').replace('/v1/models','/v1/chat/completions')} — reasoning fields are ignored.`;
+      const log = document.getElementById('vllm-chat-log');
+      if(log) log.innerHTML = '<div class="sub">New chat. Visible assistant content only; reasoning fields are discarded.</div>';
+      const input = document.getElementById('vllm-chat-input');
+      if(input) input.focus();
+      card?.scrollIntoView({behavior:'smooth', block:'start'});
+    }
+
+    async function sendVllmChat(){
+      const input = document.getElementById('vllm-chat-input');
+      const status = document.getElementById('vllm-chat-status');
+      const btn = document.getElementById('vllm-chat-send');
+      if(!vllmChatService){ if(status) status.textContent='Open VLLM CHAT from a text model card first.'; return; }
+      const text = (input?.value || '').trim();
+      if(!text) return;
+      if(input) input.value = '';
+      appendVllmChat('you', text);
+      const outbound = [...vllmChatMessages, {role:'user', content:text}];
+      if(status) status.textContent = 'Waiting for model...';
+      if(btn) btn.disabled = true;
+      try {
+        const res = await fetch('/api/vllm-chat', {
+          method:'POST',
+          headers:{'Content-Type':'application/json','X-Spark-Control-Token':CONTROL_TOKEN},
+          body:JSON.stringify({service:vllmChatService, messages:outbound, max_tokens:4096, temperature:0.2})
+        });
+        const data = await res.json();
+        if(!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        vllmChatMessages = outbound;
+        if(data.content){
+          appendVllmChat('assistant', data.content);
+          vllmChatMessages.push({role:'assistant', content:data.content});
+        } else {
+          appendVllmChat('assistant', '[No visible content returned even after the dashboard requested visible final content. Try a shorter prompt or ask for a concise final answer.]');
+        }
+        if(status) status.textContent = `${data.service_name || data.service} · ${data.model || 'model'} · ${data.usage?.completion_tokens ?? '--'} output tokens`;
+      } catch (err) {
+        console.error(err);
+        appendVllmChat('error', err.message || String(err));
+        if(status) status.textContent = `Error: ${err.message || err}`;
+      } finally {
+        if(btn) btn.disabled = false;
+        input?.focus();
+      }
+    }
+
+    function clearVllmChat(){
+      vllmChatMessages = [];
+      const log = document.getElementById('vllm-chat-log');
+      if(log) log.innerHTML = '<div class="sub">Chat cleared.</div>';
+      const status = document.getElementById('vllm-chat-status');
+      if(status) status.textContent = 'Idle.';
+      document.getElementById('vllm-chat-input')?.focus();
     }
 
     async function refreshBenchmarks(){
@@ -914,6 +1026,9 @@ HTML = r'''<!doctype html>
     }
     document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => loadFrame(tab.dataset.frame)));
     document.getElementById('refresh-now').addEventListener('click', refresh);
+    document.getElementById('vllm-chat-send')?.addEventListener('click', sendVllmChat);
+    document.getElementById('vllm-chat-clear')?.addEventListener('click', clearVllmChat);
+    document.getElementById('vllm-chat-input')?.addEventListener('keydown', (event) => { if(event.key === 'Enter' && !event.shiftKey){ event.preventDefault(); sendVllmChat(); } });
     document.getElementById('run-active-benchmark')?.addEventListener('click', () => runBenchmark('active'));
     document.getElementById('refresh-benchmarks')?.addEventListener('click', refreshBenchmarks);
 
@@ -1284,6 +1399,103 @@ def resolve_benchmark_service(service_key: str) -> tuple[dict[str, Any], dict[st
     return svc, models, requested
 
 
+
+
+def ensure_visible_answer_messages(service_key: str, messages: list[dict[str, str]]) -> None:
+    """Coax reasoning-capable text models to put the final answer in visible content.
+
+    The dashboard deliberately ignores reasoning fields. Nemotron/Qwen-family models can
+    otherwise spend the entire token budget in hidden reasoning and return empty content.
+    """
+    if service_key not in ("qwen", "ornith", "nemotronsuper"):
+        return
+    prefix = (
+        "/no_think\n"
+        "Answer directly in visible final assistant content. "
+        "Do not leave the final answer only in hidden reasoning.\n\n"
+    )
+    for idx in range(len(messages) - 1, -1, -1):
+        if messages[idx].get("role") != "user":
+            continue
+        content = messages[idx].get("content") or ""
+        if not content.lstrip().lower().startswith("/no_think"):
+            messages[idx] = {**messages[idx], "content": prefix + content}
+        return
+
+def run_vllm_chat(payload: dict[str, Any]) -> dict[str, Any]:
+    service_key = str(payload.get("service", "")).strip().lower()
+    if service_key not in LLM_BENCHMARK_SERVICE_KEYS:
+        raise ValueError("vLLM chat is only available for text model services: " + ", ".join(LLM_BENCHMARK_SERVICE_KEYS))
+    svc = next((x for x in SERVICES if x["key"] == service_key), None)
+    if not svc:
+        raise ValueError("unknown service")
+    models = http_probe(svc["health_url"], timeout=5)
+    if not models.get("ok") or not models.get("model_id"):
+        raise RuntimeError(f"service {service_key} is not healthy: {models}")
+    model_id = str(payload.get("model") or models["model_id"])
+    raw_messages = payload.get("messages")
+    if not isinstance(raw_messages, list) or not raw_messages:
+        raise ValueError("messages must be a non-empty list")
+    messages: list[dict[str, str]] = []
+    for raw in raw_messages[-24:]:
+        if not isinstance(raw, dict):
+            continue
+        role = str(raw.get("role", "user"))
+        if role not in ("system", "user", "assistant"):
+            role = "user"
+        content = str(raw.get("content", ""))[:12000]
+        if content:
+            messages.append({"role": role, "content": content})
+    if not messages:
+        raise ValueError("messages contained no content")
+    ensure_visible_answer_messages(service_key, messages)
+    try:
+        max_tokens = int(payload.get("max_tokens") or 2048)
+    except Exception:
+        max_tokens = 2048
+    max_tokens = max(1, min(max_tokens, 8192))
+    try:
+        temperature = float(payload.get("temperature", 0.2))
+    except Exception:
+        temperature = 0.2
+    temperature = max(0.0, min(temperature, 2.0))
+    body: dict[str, Any] = {
+        "model": model_id,
+        "messages": messages,
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+        "stream": False,
+    }
+    if service_key in ("qwen", "ornith"):
+        body["chat_template_kwargs"] = {"enable_thinking": False}
+    chat_url = svc["health_url"].replace("/v1/models", "/v1/chat/completions")
+    req = urllib.request.Request(
+        chat_url,
+        data=json.dumps(body).encode("utf-8"),
+        method="POST",
+        headers={"Content-Type": "application/json", "Accept": "application/json", "User-Agent": "spark-dashboard-vllm-chat/1.0"},
+    )
+    started = time.time()
+    try:
+        with urllib.request.urlopen(req, timeout=600) as r:
+            response = json.loads(r.read().decode("utf-8", errors="replace"))
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode("utf-8", errors="replace")[:4000]
+        raise RuntimeError(f"vLLM HTTP {e.code}: {detail}") from e
+    message = ((response.get("choices") or [{}])[0].get("message") or {})
+    content = message.get("content") or ""
+    return {
+        "ok": True,
+        "service": service_key,
+        "service_name": svc["name"],
+        "model": model_id,
+        "model_len": models.get("model_len"),
+        "content": content,
+        "ignored_reasoning": bool(message.get("reasoning")),
+        "usage": response.get("usage") or {},
+        "duration_sec": round(time.time() - started, 3),
+    }
+
 def run_llm_benchmark(service_key: str) -> dict[str, Any]:
     svc, models, service_key = resolve_benchmark_service(service_key)
     model_id = str(models["model_id"])
@@ -1514,7 +1726,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         path = self.clean_path()
-        if path not in ("/api/control", "/api/benchmark"):
+        if path not in ("/api/control", "/api/benchmark", "/api/vllm-chat"):
             self.send_error(404)
             return
         if self.headers.get("X-Spark-Control-Token", "") != control_token():
@@ -1522,16 +1734,18 @@ class Handler(BaseHTTPRequestHandler):
             return
         try:
             length = int(self.headers.get("Content-Length", "0") or "0")
-            payload = json.loads(self.rfile.read(min(length, 4096)) or b"{}")
+            payload = json.loads(self.rfile.read(min(length, 65536)) or b"{}")
             if path == "/api/control":
                 service = str(payload.get("service", ""))
                 action = str(payload.get("action", ""))
                 result = run_control_action(service, action)
                 status = 200 if result.get("ok") else 500
                 self.send_json(result, status=status)
-            else:
+            elif path == "/api/benchmark":
                 service = str(payload.get("service", "qwen"))
                 self.send_json(run_llm_benchmark(service), status=200)
+            else:
+                self.send_json(run_vllm_chat(payload), status=200)
         except subprocess.TimeoutExpired as e:
             self.send_json({"ok": False, "error": "action timed out", "stdout": e.stdout or "", "stderr": e.stderr or ""}, status=504)
         except Exception as e:
