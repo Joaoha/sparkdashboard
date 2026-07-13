@@ -97,6 +97,17 @@ def clone_repo(url: str, dest: Path, branch: str | None, *, dry_run: bool, recur
         if recursive:
             run(["git", "submodule", "update", "--init", "--recursive"], cwd=dest, dry_run=dry_run)
         return
+    if dest.exists():
+        entries = list(dest.iterdir())
+        if len(entries) == 1 and entries[0].name == ".venv" and (entries[0] / "pyvenv.cfg").exists():
+            # Older installer builds created the package venv before cloning
+            # repos directly into the install root, leaving root/.venv as the
+            # only entry and making git clone fail with "not an empty directory".
+            # That venv is disposable bootstrap state; remove it so reruns of
+            # personaplex/pixal3d can recover without manual cleanup.
+            print(f"remove stale pre-clone venv {entries[0]}")
+            if not dry_run:
+                shutil.rmtree(entries[0])
     cmd = ["git", "clone", "--depth", "1"]
     if recursive:
         cmd.append("--recursive")
@@ -210,13 +221,13 @@ def install_package(key: str, *, download_models: bool, skip_deps: bool, build_p
     ensure_owned_dir(root, dry_run=dry_run)
 
     kind = meta["kind"]
-    py = venv_python(root, dry_run=dry_run)
 
     if kind == "bundled_diffusers_app":
         src_dir = REPO_ROOT / "packages" / key
         copy_tree(src_dir / "app.py", root / "app.py", dry_run=dry_run)
         if (src_dir / "scripts").exists():
             copy_tree(src_dir / "scripts", root / "scripts", dry_run=dry_run)
+        py = venv_python(root, dry_run=dry_run)
         if not skip_deps:
             install_torch(py, dry_run=dry_run)
             pip_install(py, DIFFUSERS_GIT_DEPS if key in {"flux2", "krea2"} else DIFFUSERS_DEPS, dry_run=dry_run)
@@ -228,6 +239,7 @@ def install_package(key: str, *, download_models: bool, skip_deps: bool, build_p
     elif key == "hidream":
         clone_repo(meta["repo"], root / "repo", meta.get("branch"), dry_run=dry_run)
         write_hidream_helpers(root, dry_run=dry_run)
+        py = venv_python(root, dry_run=dry_run)
         if not skip_deps:
             install_torch(py, dry_run=dry_run)
             req = root / "repo/requirements.txt"
@@ -246,6 +258,7 @@ def install_package(key: str, *, download_models: bool, skip_deps: bool, build_p
         # checkpoint. This may require git-lfs/HF auth.
         if not (root / ".git").exists():
             clone_repo(meta["repo"], root, meta.get("branch"), dry_run=dry_run)
+        py = venv_python(root, dry_run=dry_run)
         if not skip_deps:
             install_torch(py, dry_run=dry_run)
             req = root / "moshi/requirements.txt"
@@ -257,6 +270,7 @@ def install_package(key: str, *, download_models: bool, skip_deps: bool, build_p
 
     elif key == "pixal3d":
         clone_repo(meta["repo"], root, meta.get("branch"), dry_run=dry_run)
+        py = venv_python(root, dry_run=dry_run)
         if not skip_deps:
             run(["apt-get", "update", "-qq"], sudo=True, dry_run=dry_run)
             run(["apt-get", "install", "-y", "git", "cmake", "ninja-build", "build-essential", "python3.12-venv", "libx11-dev", "libegl1-mesa-dev", "libgl1-mesa-dev", "libxext-dev"], sudo=True, dry_run=dry_run)
@@ -277,6 +291,7 @@ def install_package(key: str, *, download_models: bool, skip_deps: bool, build_p
             if child.name == "__pycache__":
                 continue
             copy_tree(child, root / child.name, dry_run=dry_run)
+        py = venv_python(root, dry_run=dry_run)
         if not skip_deps:
             install_torch(py, dry_run=dry_run)
             req = root / "repo/requirements.txt"
