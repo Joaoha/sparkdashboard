@@ -27,7 +27,7 @@ BENCHMARK_PROMPT = """/no_think
 You are benchmarking a local LLM. Write a concise but information-dense technical note about running multiple AI model services on a unified-memory workstation. Include practical tradeoffs, scheduling concerns, and one final recommendation. Keep writing until you have given a complete answer."""
 BENCHMARK_MAX_TOKENS = 192
 
-LLM_BENCHMARK_SERVICE_KEYS = ("qwen", "ornith", "mistralmedium")
+LLM_BENCHMARK_SERVICE_KEYS = ("qwen", "ornith", "mistralmedium", "nemotronsuper")
 # Fixed allow-list only: the dashboard never accepts arbitrary commands.
 CONTROL_ACTIONS: dict[tuple[str, str], dict[str, Any]] = {
     ("qwen", "start"): {
@@ -195,6 +195,16 @@ CONTROL_ACTIONS: dict[tuple[str, str], dict[str, Any]] = {
         "cmd": ["systemctl", "--user", "stop", "mistral-medium-vllm.service"],
         "timeout": 120,
     },
+    ("nemotronsuper", "start"): {
+        "label": "Start Nemotron 3 Super 120B",
+        "cmd": ["systemctl", "--user", "start", "nemotron-super-vllm.service"],
+        "timeout": 3600,
+    },
+    ("nemotronsuper", "stop"): {
+        "label": "Stop Nemotron 3 Super",
+        "cmd": ["systemctl", "--user", "stop", "nemotron-super-vllm.service"],
+        "timeout": 180,
+    },
 }
 
 _LOG_CACHE: dict[str, tuple[float, list[str]]] = {}
@@ -233,6 +243,17 @@ SERVICES = [
         "frontend_url": f"http://{PUBLIC_HOST}:8002/docs",
         "accent": "warn",
         "process_hints": ["mistral-medium-vllm", "Mistral-Medium-3.5-128B-NVFP4"],
+    },
+    {
+        "key": "nemotronsuper",
+        "name": "Nemotron 3 Super",
+        "unit": "nemotron-super-vllm.service",
+        "kind": "120B/12B-active NVFP4 text model",
+        "health_url": "http://127.0.0.1:8003/v1/models",
+        "public_url": f"http://{PUBLIC_HOST}:8003/v1/models",
+        "frontend_url": f"http://{PUBLIC_HOST}:8003/docs",
+        "accent": "accent",
+        "process_hints": ["nemotron-super-vllm", "NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4"],
     },
     {
         "key": "personaplex",
@@ -653,6 +674,7 @@ HTML = r'''<!doctype html>
       qwen: {port: 8000, frontend: '/docs', health: '/v1/models'},
       ornith: {port: 8001, frontend: '/docs', health: '/v1/models'},
       mistralmedium: {port: 8002, frontend: '/docs', health: '/v1/models'},
+      nemotronsuper: {port: 8003, frontend: '/docs', health: '/v1/models'},
       personaplex: {port: 8998, frontend: '/', health: '/', protocol: 'https:'},
       hidream: {port: 7861, frontend: '/', health: '/'},
       pixal3d: {port: 7863, frontend: '/', health: '/'},
@@ -678,8 +700,8 @@ HTML = r'''<!doctype html>
       return url.toString();
     }
     const frontends = Object.fromEntries(Object.keys(serviceRoutes).map(k => [k, sameHostUrl(k, 'frontend')]));
-    const serviceOrder = ['qwen','ornith','mistralmedium','personaplex','hidream','pixal3d','triposplat','zimage','qwenimage','flux2','domainshuttle','krea2','un0','agent3dify'];
-    const accentClass = { qwen:'accent', ornith:'warn', mistralmedium:'warn', personaplex:'info', hidream:'warn', pixal3d:'good', triposplat:'good', zimage:'accent', qwenimage:'warn', flux2:'accent', domainshuttle:'info', krea2:'good', agent3dify:'info', un0:'good' };
+    const serviceOrder = ['qwen','ornith','mistralmedium','nemotronsuper','personaplex','hidream','pixal3d','triposplat','zimage','qwenimage','flux2','domainshuttle','krea2','un0','agent3dify'];
+    const accentClass = { qwen:'accent', ornith:'warn', mistralmedium:'warn', nemotronsuper:'accent', personaplex:'info', hidream:'warn', pixal3d:'good', triposplat:'good', zimage:'accent', qwenimage:'warn', flux2:'accent', domainshuttle:'info', krea2:'good', agent3dify:'info', un0:'good' };
 
 
     document.querySelectorAll('a.navitem[href^="#"]').forEach(link => {
@@ -1389,7 +1411,7 @@ def resolve_benchmark_service(service_key: str) -> tuple[dict[str, Any], dict[st
         names = ", ".join(f"{svc['key']}={models.get('model_id')}" for svc, models in healthy)
         raise RuntimeError("multiple active LLM services found; use an explicit service key: " + names)
     if requested not in LLM_BENCHMARK_SERVICE_KEYS:
-        raise ValueError("benchmark service must be active, qwen, ornith, or mistralmedium")
+        raise ValueError("benchmark service must be active, qwen, ornith, mistralmedium, or nemotronsuper")
     svc = next((x for x in SERVICES if x["key"] == requested), None)
     if not svc:
         raise ValueError("unknown service")
