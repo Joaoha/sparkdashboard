@@ -90,13 +90,17 @@ class InstallerRecoveryTests(unittest.TestCase):
         dest = self.temp / "Pixal3D"
         (dest / ".git").mkdir(parents=True)
         (dest / "partial-file").write_text("partial\n")
-        calls: list[list[str]] = []
+        calls: list[tuple[list[str], dict]] = []
 
-        with patch.object(self.installer, "run", side_effect=lambda cmd, **_kwargs: calls.append(list(cmd))):
+        def record_run(cmd, **kwargs):
+            calls.append((list(cmd), kwargs))
+
+        with patch.object(self.installer, "run", side_effect=record_run):
             self.installer.clone_repo("https://example.invalid/Pixal3D.git", dest, "main", dry_run=False)
 
-        self.assertTrue(any(cmd[0] == "mv" for cmd in calls), calls)
-        self.assertTrue(any(cmd[:2] == ["git", "clone"] for cmd in calls), calls)
+        move = next((cmd, kwargs) for cmd, kwargs in calls if cmd[0] == "mv")
+        self.assertFalse(move[1]["sudo"], "a user-writable test/install parent must not require sudo")
+        self.assertTrue(any(cmd[:2] == ["git", "clone"] for cmd, _kwargs in calls), calls)
 
     def test_bootstrap_can_be_rerun_without_reusing_a_previous_checkout(self):
         """The published one-command entry point uses a new temporary checkout each time."""

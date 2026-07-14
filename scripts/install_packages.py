@@ -149,7 +149,10 @@ def clone_repo(url: str, dest: Path, branch: str | None, *, dry_run: bool, recur
             # one-command operation.
             backup = interrupted_clone_backup_path(dest)
             print(f"quarantine incomplete clone {dest} -> {backup}")
-            run(["mv", str(dest), str(backup)], sudo=True, dry_run=dry_run)
+            # `/opt` generally needs sudo for the rename, while a caller-provided
+            # user-writable install root should stay non-interactive.
+            needs_sudo = not os.access(dest.parent, os.W_OK | os.X_OK)
+            run(["mv", str(dest), str(backup)], sudo=needs_sudo, dry_run=dry_run)
     cmd = ["git", "clone", "--depth", "1"]
     if recursive:
         cmd.append("--recursive")

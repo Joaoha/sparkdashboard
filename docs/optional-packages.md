@@ -4,16 +4,16 @@ The base installer deploys the dashboard and text LLM stack. Use `--packages` to
 
 ## Quick install all optional packages
 
-Install dashboard, text model services, and all optional app package scaffolding:
+After the base dashboard installation, install all optional app package scaffolding:
 
 ```bash
-./install.sh --models all --packages all --start dashboard
+sparkdashboard-install-packages all
 ```
 
 Install everything and also download optional package model weights where the installer has a downloader:
 
 ```bash
-./install.sh --models all --packages all --package-models all --start dashboard
+sparkdashboard-install-packages all --download-models
 ```
 
 This is very large. Budget several hundred GiB of disk and a long download/build window.
@@ -21,7 +21,7 @@ This is very large. Budget several hundred GiB of disk and a long download/build
 ## Install selected packages
 
 ```bash
-./install.sh --skip-model-download --packages z-image,qwen-image,flux2,krea2 --start dashboard
+sparkdashboard-install-packages z-image,qwen-image,flux2,krea2
 ```
 
 Later download optional package weights:
@@ -85,10 +85,10 @@ Install Pixal3D with full TRELLIS.2 native CUDA extension build:
 sparkdashboard-install-packages pixal3d --build-pixal3d-trellis
 ```
 
-Or through the top-level installer:
+Or as part of the one-command base installation:
 
 ```bash
-./install.sh --skip-model-download --packages pixal3d --build-pixal3d-trellis --start dashboard
+curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/main/bootstrap.sh | bash -s -- --skip-model-download --packages pixal3d --build-pixal3d-trellis --start dashboard
 ```
 
 Dry-run all packages:

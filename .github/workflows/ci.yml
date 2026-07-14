@@ -20,6 +20,7 @@ jobs:
       - name: Shell syntax
         run: |
           bash -n install.sh
+          bash -n bootstrap.sh
           bash -n bin/*.sh
           bash -n scripts/smoke.sh
       - name: Validate manifests
@@ -38,3 +39,5 @@ jobs:
             --model-dir /tmp/spark-models \
             --public-host spark-test.local \
             --dashboard-port 17862
+      - name: Installer recovery tests
+        run: python -m unittest discover -s tests -v

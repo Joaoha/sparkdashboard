@@ -75,7 +75,7 @@ Use these providers in OpenCode if you also configure OpenCode against this Spar
 ## Custom install options
 
 ```bash
-./install.sh \
+curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/main/bootstrap.sh | bash -s -- \
   --install-root /opt/spark-dashboard \
   --model-dir /home/$USER/models/hf \
   --public-host my-spark.local \

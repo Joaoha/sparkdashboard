@@ -128,19 +128,19 @@ sparkdashboard-download-models qwen,ornith,mistral --model-dir ~/models/hf
 The dashboard can also install the optional app packages shown in its service grid:
 
 ```bash
-./install.sh --skip-model-download --packages all --start dashboard
+sparkdashboard-install-packages all
 ```
 
 Install optional app packages and download optional package weights where implemented:
 
 ```bash
-./install.sh --skip-model-download --packages all --package-models all --start dashboard
+sparkdashboard-install-packages all --download-models
 ```
 
 For selected packages:
 
 ```bash
-./install.sh --skip-model-download --packages z-image,qwen-image,flux2,krea2 --start dashboard
+sparkdashboard-install-packages z-image,qwen-image,flux2,krea2
 ```
 
 See [Optional Spark app packages](optional-packages.md) for package names, ports, caveats, and verification.
@@ -150,7 +150,7 @@ See [Optional Spark app packages](optional-packages.md) for package names, ports
 Common custom install:
 
 ```bash
-./install.sh \
+curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/main/bootstrap.sh | bash -s -- \
   --install-root /opt/spark-dashboard \
   --model-dir /data/models/hf \
   --public-host my-spark.local \
@@ -184,7 +184,7 @@ Installer options:
 Dry-run example:
 
 ```bash
-./install.sh --dry-run --models none --start none \
+curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/main/bootstrap.sh | bash -s -- --dry-run --models none --start none \
   --install-root /tmp/spark-dashboard-test \
   --model-dir /tmp/spark-models \
   --public-host spark-test.local \
