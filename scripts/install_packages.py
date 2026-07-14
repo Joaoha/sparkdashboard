@@ -265,7 +265,20 @@ def install_package(key: str, *, download_models: bool, skip_deps: bool, build_p
             install_torch(py, dry_run=dry_run)
             req = root / "moshi/requirements.txt"
             if req.exists() or dry_run:
-                run([str(py), "-m", "pip", "install", "-r", str(req), "accelerate", "hf_transfer", "bitsandbytes"], dry_run=dry_run)
+                # moshi pins torch<2.5, which would downgrade Spark/GB10's
+                # CUDA-13 PyTorch wheel. Keep the known-good torch installed by
+                # install_torch() and install the rest of the PersonaPlex deps.
+                filtered_req = root / ".spark-personaplex-requirements.txt"
+                print(f"write {filtered_req} without upstream torch pin")
+                if not dry_run:
+                    filtered_lines = []
+                    for line in req.read_text().splitlines():
+                        stripped = line.strip().lower()
+                        if stripped == "torch" or stripped.startswith(("torch<", "torch=", "torch>", "torch~", "torch!")):
+                            continue
+                        filtered_lines.append(line)
+                    filtered_req.write_text("\n".join(filtered_lines) + "\n")
+                run([str(py), "-m", "pip", "install", "-r", str(filtered_req), "accelerate", "hf_transfer", "bitsandbytes"], dry_run=dry_run)
             moshi = root / "moshi"
             if moshi.exists() or dry_run:
                 run([str(py), "-m", "pip", "install", "--no-deps", str(moshi)], dry_run=dry_run)
