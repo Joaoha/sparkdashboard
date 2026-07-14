@@ -69,12 +69,12 @@ You can choose another directory with `--model-dir`.
 On the new Spark:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/f7e9a832e720f168133b93e1cc6a0522015ba6f8/bootstrap.sh | SPARKDASHBOARD_REF=f7e9a832e720f168133b93e1cc6a0522015ba6f8 bash -s -- --models all --packages all --start dashboard
+curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/cd4bc2f0119668f8d9dd4fdc650a3949cfd8f7c7/bootstrap.sh | SPARKDASHBOARD_REF=cd4bc2f0119668f8d9dd4fdc650a3949cfd8f7c7 bash -s -- --models all --packages all --start dashboard
 ```
 
 Add `--package-models all` if this fresh machine should also download optional app model weights in the same run.
 
-The command pins both the bootstrap script and installed source tree to immutable Git commit `f7e9a832e720f168133b93e1cc6a0522015ba6f8`. The bootstrap checks out that installer revision in a disposable temporary directory, so it is safe to rerun after an interrupted or failed install. Completed optional-package Git checkouts are reused; a partial clone is preserved as a timestamped `.interrupted-clone-*` sibling and replaced with a clean retry.
+The command pins both the bootstrap script and installed source tree to immutable Git commit `cd4bc2f0119668f8d9dd4fdc650a3949cfd8f7c7`. The bootstrap checks out that installer revision in a disposable temporary directory, so it is safe to rerun after an interrupted or failed install. Completed optional-package Git checkouts are reused; a partial clone is preserved as a timestamped `.interrupted-clone-*` sibling and replaced with a clean retry.
 
 This will:
 
@@ -106,7 +106,7 @@ http://my-spark.local:7862
 If you want the dashboard online before downloading large model snapshots:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/f7e9a832e720f168133b93e1cc6a0522015ba6f8/bootstrap.sh | SPARKDASHBOARD_REF=f7e9a832e720f168133b93e1cc6a0522015ba6f8 bash -s -- --skip-model-download --start dashboard
+curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/cd4bc2f0119668f8d9dd4fdc650a3949cfd8f7c7/bootstrap.sh | SPARKDASHBOARD_REF=cd4bc2f0119668f8d9dd4fdc650a3949cfd8f7c7 bash -s -- --skip-model-download --start dashboard
 ```
 
 Then download models individually:
@@ -150,7 +150,7 @@ See [Optional Spark app packages](optional-packages.md) for package names, ports
 Common custom install:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/f7e9a832e720f168133b93e1cc6a0522015ba6f8/bootstrap.sh | SPARKDASHBOARD_REF=f7e9a832e720f168133b93e1cc6a0522015ba6f8 bash -s -- \
+curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/cd4bc2f0119668f8d9dd4fdc650a3949cfd8f7c7/bootstrap.sh | SPARKDASHBOARD_REF=cd4bc2f0119668f8d9dd4fdc650a3949cfd8f7c7 bash -s -- \
   --install-root /opt/spark-dashboard \
   --model-dir /data/models/hf \
   --public-host my-spark.local \
@@ -184,7 +184,7 @@ Installer options:
 Dry-run example:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/f7e9a832e720f168133b93e1cc6a0522015ba6f8/bootstrap.sh | SPARKDASHBOARD_REF=f7e9a832e720f168133b93e1cc6a0522015ba6f8 bash -s -- --dry-run --models none --start none \
+curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/cd4bc2f0119668f8d9dd4fdc650a3949cfd8f7c7/bootstrap.sh | SPARKDASHBOARD_REF=cd4bc2f0119668f8d9dd4fdc650a3949cfd8f7c7 bash -s -- --dry-run --models none --start none \
   --install-root /tmp/spark-dashboard-test \
   --model-dir /tmp/spark-models \
   --public-host spark-test.local \
@@ -430,7 +430,7 @@ Qwen and Ornith benchmarks use no-think style prompts. Mistral does not accept Q
 On the Spark:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/f7e9a832e720f168133b93e1cc6a0522015ba6f8/bootstrap.sh | SPARKDASHBOARD_REF=f7e9a832e720f168133b93e1cc6a0522015ba6f8 bash -s -- --skip-model-download --start dashboard
+curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/cd4bc2f0119668f8d9dd4fdc650a3949cfd8f7c7/bootstrap.sh | SPARKDASHBOARD_REF=cd4bc2f0119668f8d9dd4fdc650a3949cfd8f7c7 bash -s -- --skip-model-download --start dashboard
 ```
 
 This refreshes installed app files, scripts, and systemd units without redownloading models.
