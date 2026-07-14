@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -12,6 +13,11 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = json.loads((REPO_ROOT / "config/packages.json").read_text())["packages"]
+
+# dmlc/decord has no ARM64 CPython 3.12 wheel on PyPI. Pin the official source
+# revision used for the local build so reruns remain reproducible.
+DECORD_REPO = "https://github.com/dmlc/decord.git"
+DECORD_COMMIT = "d2e56190286ae394032a8141885f76d5372bd44b"
 
 TEXT_MODEL_UNITS = {
     "qwen-nvfp4-vllm.service",
@@ -188,7 +194,13 @@ def build_decord_from_source(root: Path, py: Path, *, dry_run: bool) -> None:
     ``decord`` requirement.
     """
     decord_root = root / "decord"
-    clone_repo("https://github.com/dmlc/decord.git", decord_root, None, dry_run=dry_run, recursive=True)
+    clone_repo(DECORD_REPO, decord_root, None, dry_run=dry_run, recursive=True)
+    # clone_repo is deliberately retry-friendly. Fetch and detach at the
+    # reviewed object ID on every run so reuse never follows upstream HEAD.
+    run(["git", "fetch", "--depth", "1", "origin", DECORD_COMMIT], cwd=decord_root, dry_run=dry_run)
+    run(["git", "checkout", "--detach", DECORD_COMMIT], cwd=decord_root, dry_run=dry_run)
+    run(["git", "submodule", "sync", "--recursive"], cwd=decord_root, dry_run=dry_run)
+    run(["git", "submodule", "update", "--init", "--recursive"], cwd=decord_root, dry_run=dry_run)
     build_dir = decord_root / "build"
     run(
         [
@@ -208,8 +220,12 @@ def write_domainshuttle_requirements_without_decord(req: Path, filtered: Path, *
     if not dry_run:
         lines = []
         for line in req.read_text().splitlines():
-            name = line.split("#", 1)[0].strip().lower()
-            if name == "decord" or name.startswith(("decord=", "decord<", "decord>", "decord~", "decord!", "decord[")):
+            candidate = line.split("#", 1)[0].strip()
+            # Preserve requirements-file options/includes. For a PEP 508 entry
+            # the normalized distribution name is the first identifier.
+            match = re.match(r"^([A-Za-z0-9][A-Za-z0-9._-]*)", candidate)
+            normalized_name = re.sub(r"[-_.]+", "-", match.group(1)).lower() if match else ""
+            if normalized_name == "decord":
                 continue
             lines.append(line)
         filtered.write_text("\n".join(lines) + "\n")
@@ -417,7 +433,7 @@ def install_package(key: str, *, download_models: bool, skip_deps: bool, build_p
                 ], sudo=True, dry_run=dry_run)
             install_torch(py, dry_run=dry_run)
             req = root / "repo/requirements.txt"
-            if req.exists():
+            if req.exists() or (key == "domainshuttle" and dry_run):
                 if key == "domainshuttle":
                     filtered_req = write_domainshuttle_requirements_without_decord(
                         req, root / ".spark-domainshuttle-requirements.txt", dry_run=dry_run
@@ -426,6 +442,8 @@ def install_package(key: str, *, download_models: bool, skip_deps: bool, build_p
                     build_decord_from_source(root, py, dry_run=dry_run)
                 else:
                     run([str(py), "-m", "pip", "install", "-r", str(req)], dry_run=dry_run)
+            elif key == "domainshuttle":
+                raise SystemExit(f"DomainShuttle requirements missing after clone: {req}")
             pip_install(py, DIFFUSERS_GIT_DEPS if key in {"un0", "triposplat"} else COMMON_WEB_DEPS, dry_run=dry_run)
             if key in {"un0", "agent3dify"}:
                 run([str(py), "-m", "pip", "install", "--no-deps", "-e", str(root / "repo")], dry_run=dry_run)

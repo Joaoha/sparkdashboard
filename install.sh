@@ -118,7 +118,7 @@ PY
   bash -n "$REPO_DIR/install.sh" "$REPO_DIR"/bin/*.sh "$REPO_DIR/scripts/smoke.sh"
   python3 -m json.tool "$REPO_DIR/config/models.json" >/dev/null
   python3 -m json.tool "$REPO_DIR/config/packages.json" >/dev/null
-  dry_pkg_args=("$PACKAGES" --dry-run --skip-deps)
+  dry_pkg_args=("$PACKAGES" --dry-run)
   if [ "$BUILD_PIXAL3D_TRELLIS" = "1" ]; then dry_pkg_args+=(--build-pixal3d-trellis); fi
   "$REPO_DIR/scripts/install_packages.py" "${dry_pkg_args[@]}"
   rm -rf "$tmp"

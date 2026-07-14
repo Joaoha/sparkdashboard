@@ -151,7 +151,11 @@ class InstallerRecoveryTests(unittest.TestCase):
         root = self.temp / "domainshuttle"
         repo = root / "repo"
         repo.mkdir(parents=True)
-        (repo / "requirements.txt").write_text("numpy\ndecord\ntimm\n")
+        (repo / "requirements.txt").write_text(
+            "numpy\nDecord >= 0.6\ndecord ; python_version >= '3.12'\n"
+            "decord[torch]\ndecord @ git+https://example.invalid/decord.git\n"
+            "-r shared-requirements.txt\ntimm\n"
+        )
         events: list[tuple[str, list[str]]] = []
         clone_calls: list[tuple[str, Path, bool]] = []
         manifest = dict(self.installer.MANIFEST)
@@ -182,15 +186,69 @@ class InstallerRecoveryTests(unittest.TestCase):
             )
 
         filtered = root / ".spark-domainshuttle-requirements.txt"
-        self.assertNotIn("decord", filtered.read_text().splitlines())
+        self.assertEqual(filtered.read_text().splitlines(), ["numpy", "-r shared-requirements.txt", "timm"])
         self.assertIn(
             ("https://github.com/dmlc/decord.git", root / "decord", True),
             clone_calls,
         )
         apt_install = next(cmd for kind, cmd in events if kind == "run" and cmd[:2] == ["apt-get", "install"])
         self.assertIn("libavcodec-dev", apt_install)
-        self.assertTrue(any(cmd[0] == "cmake" for kind, cmd in events if kind == "run"))
-        self.assertTrue(any(cmd[:4] == [str(root / ".venv/bin/python"), "-m", "pip", "install"] and str(root / "decord/python") in cmd for kind, cmd in events if kind == "run"))
+        fetch_index = next(i for i, (_kind, cmd) in enumerate(events) if cmd[:3] == ["git", "fetch", "--depth"] and self.installer.DECORD_COMMIT in cmd)
+        checkout_index = next(i for i, (_kind, cmd) in enumerate(events) if cmd[:2] == ["git", "checkout"] and self.installer.DECORD_COMMIT in cmd)
+        cmake_indices = [i for i, (_kind, cmd) in enumerate(events) if cmd[0] == "cmake"]
+        binding_index = next(i for i, (_kind, cmd) in enumerate(events) if cmd[:4] == [str(root / ".venv/bin/python"), "-m", "pip", "install"] and str(root / "decord/python") in cmd)
+        import_index = next(i for i, (_kind, cmd) in enumerate(events) if cmd[:2] == [str(root / ".venv/bin/python"), "-c"] and "import decord" in cmd[2])
+        self.assertLess(fetch_index, checkout_index)
+        self.assertLess(checkout_index, cmake_indices[0])
+        self.assertLess(cmake_indices[0], cmake_indices[-1])
+        self.assertLess(cmake_indices[-1], binding_index)
+        self.assertLess(binding_index, import_index)
+
+    def test_domainshuttle_dry_run_shows_decord_build_steps(self):
+        """A clean-host dry-run must expose the Decord source-build work."""
+        root = self.temp / "domainshuttle"
+        events: list[list[str]] = []
+        manifest = dict(self.installer.MANIFEST)
+        manifest["domainshuttle"] = {**manifest["domainshuttle"], "root": str(root)}
+
+        with (
+            patch.object(self.installer, "MANIFEST", manifest),
+            patch.object(self.installer, "ensure_owned_dir"),
+            patch.object(self.installer, "clone_repo"),
+            patch.object(self.installer, "copy_tree"),
+            patch.object(self.installer, "venv_python", return_value=root / ".venv/bin/python"),
+            patch.object(self.installer, "install_torch"),
+            patch.object(self.installer, "pip_install"),
+            patch.object(self.installer, "run", side_effect=lambda cmd, **_kwargs: events.append(list(cmd))),
+        ):
+            self.installer.install_package(
+                "domainshuttle",
+                download_models=False,
+                skip_deps=False,
+                build_pixal3d_trellis_flag=False,
+                dry_run=True,
+            )
+
+        self.assertTrue(any(cmd[0] == "cmake" for cmd in events))
+        self.assertTrue(any("decord/python" in " ".join(cmd) for cmd in events))
+
+    def test_install_dry_run_includes_domainshuttle_dependency_steps(self):
+        """Top-level --dry-run must not hide package dependency work."""
+        completed = subprocess.run(
+            [
+                "bash", str(REPO_ROOT / "install.sh"), "--dry-run",
+                "--models", "none", "--packages", "domainshuttle", "--start", "none",
+                "--install-root", str(self.temp / "install-root"),
+                "--model-dir", str(self.temp / "models"),
+                "--public-host", "spark-test.local", "--dashboard-port", "17862",
+            ],
+            env={**os.environ, "TMPDIR": str(self.temp)},
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("git fetch --depth 1 origin", completed.stdout)
+        self.assertIn("decord/python", completed.stdout)
 
     def test_bootstrap_can_be_rerun_without_reusing_a_previous_checkout(self):
         """The published one-command entry point uses a new temporary checkout each time."""
