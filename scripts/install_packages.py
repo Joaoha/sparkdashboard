@@ -110,7 +110,19 @@ def is_complete_git_checkout(path: Path) -> bool:
         capture_output=True,
         check=False,
     )
-    return work_tree.returncode == 0 and work_tree.stdout.strip() == "true" and head.returncode == 0
+    tracked_changes = subprocess.run(
+        ["git", "-C", str(path), "status", "--porcelain", "--untracked-files=no"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    return (
+        work_tree.returncode == 0
+        and work_tree.stdout.strip() == "true"
+        and head.returncode == 0
+        and tracked_changes.returncode == 0
+        and not tracked_changes.stdout.strip()
+    )
 
 
 def interrupted_clone_backup_path(dest: Path) -> Path:

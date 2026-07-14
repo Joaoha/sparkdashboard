@@ -8,8 +8,13 @@
 set -euo pipefail
 
 REPO_URL=${SPARKDASHBOARD_REPO_URL:-https://github.com/joaoha/sparkdashboard.git}
-REF=${SPARKDASHBOARD_REF:-main}
+REF=${SPARKDASHBOARD_REF:-}
 WORK_PARENT=${SPARKDASHBOARD_BOOTSTRAP_TMPDIR:-${TMPDIR:-/tmp}}
+
+if ! [[ "$REF" =~ ^[0-9a-fA-F]{40}$ ]]; then
+  echo "SPARKDASHBOARD_REF must be an immutable 40-character commit SHA." >&2
+  exit 2
+fi
 
 if ! command -v git >/dev/null 2>&1; then
   if ! command -v apt-get >/dev/null 2>&1; then
@@ -34,6 +39,9 @@ checkout="$work_dir/repo"
 cleanup() { rm -rf "$work_dir"; }
 trap cleanup EXIT
 
-echo "Cloning Spark Dashboard installer ($REF) into a temporary checkout..."
-git clone --depth 1 --branch "$REF" "$REPO_URL" "$checkout"
+echo "Fetching Spark Dashboard installer revision $REF into a temporary checkout..."
+git init --quiet "$checkout"
+git -C "$checkout" remote add origin "$REPO_URL"
+git -C "$checkout" fetch --depth 1 origin "$REF"
+git -C "$checkout" checkout --quiet --detach FETCH_HEAD
 "$checkout/install.sh" "$@"

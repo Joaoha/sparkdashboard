@@ -85,6 +85,26 @@ class InstallerRecoveryTests(unittest.TestCase):
 
         self.assertEqual(calls, [])
 
+    def test_head_bearing_checkout_missing_a_tracked_file_is_repaired(self):
+        """A resolved HEAD alone does not prove an interrupted checkout is usable."""
+        origin = self.temp / "origin"
+        dest = self.temp / "dest"
+        subprocess.run(["git", "init", "--initial-branch=main", str(origin)], check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(origin), "config", "user.name", "Test"], check=True)
+        subprocess.run(["git", "-C", str(origin), "config", "user.email", "test@example.invalid"], check=True)
+        (origin / "requirements.txt").write_text("fixture-dependency\n")
+        subprocess.run(["git", "-C", str(origin), "add", "requirements.txt"], check=True)
+        subprocess.run(["git", "-C", str(origin), "commit", "-m", "fixture"], check=True, capture_output=True)
+        subprocess.run(["git", "clone", str(origin), str(dest)], check=True, capture_output=True)
+        (dest / "requirements.txt").unlink()
+
+        self.assertFalse(self.installer.is_complete_git_checkout(dest))
+        self.installer.clone_repo(origin.as_uri(), dest, "main", dry_run=False)
+
+        self.assertTrue(self.installer.is_complete_git_checkout(dest))
+        self.assertEqual((dest / "requirements.txt").read_text(), "fixture-dependency\n")
+        self.assertTrue(list(self.temp.glob(".dest.interrupted-clone-*")))
+
     def test_incomplete_clone_is_quarantined_then_retried(self):
         """A corrupt .git directory from an interrupted clone cannot block retry."""
         dest = self.temp / "Pixal3D"
@@ -112,11 +132,12 @@ class InstallerRecoveryTests(unittest.TestCase):
         (origin / "install.sh").chmod(0o755)
         subprocess.run(["git", "-C", str(origin), "add", "install.sh"], check=True)
         subprocess.run(["git", "-C", str(origin), "commit", "-m", "fixture"], check=True, capture_output=True)
+        commit = subprocess.check_output(["git", "-C", str(origin), "rev-parse", "HEAD"], text=True).strip()
         log = self.temp / "runs.log"
         env = {
             **os.environ,
             "SPARKDASHBOARD_REPO_URL": origin.as_uri(),
-            "SPARKDASHBOARD_REF": "main",
+            "SPARKDASHBOARD_REF": commit,
             "BOOTSTRAP_TEST_LOG": str(log),
             "TMPDIR": str(self.temp),
         }
@@ -131,6 +152,21 @@ class InstallerRecoveryTests(unittest.TestCase):
             self.assertEqual(completed.returncode, 0, completed.stderr)
 
         self.assertEqual(log.read_text().splitlines(), ["--models none --start none", "--models none --start none"])
+
+    def test_bootstrap_rejects_a_mutable_branch_ref(self):
+        """The public entry point must not execute an arbitrary moving branch."""
+        completed = subprocess.run(
+            ["bash", str(BOOTSTRAP_PATH), "--help"],
+            env={
+                **os.environ,
+                "SPARKDASHBOARD_REPO_URL": "file:///does-not-matter",
+                "SPARKDASHBOARD_REF": "main",
+            },
+            text=True,
+            capture_output=True,
+        )
+        self.assertNotEqual(completed.returncode, 0)
+        self.assertIn("40-character commit SHA", completed.stderr)
 
 
 if __name__ == "__main__":
