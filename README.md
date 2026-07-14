@@ -20,15 +20,15 @@ Optional app packages: [Optional Spark app packages](docs/optional-packages.md)
 ## One-command install on a fresh Spark
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/07c25d552b5ad461a366b9a45eeb77ebe7ed3acf/bootstrap.sh | SPARKDASHBOARD_REF=07c25d552b5ad461a366b9a45eeb77ebe7ed3acf bash -s -- --models all --packages all --start dashboard
+curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/c355ce75648433c50ad44298910254780a8e906f/bootstrap.sh | SPARKDASHBOARD_REF=c355ce75648433c50ad44298910254780a8e906f bash -s -- --models all --packages all --start dashboard
 ```
 
-This command pins both the bootstrap script and installed source tree to immutable Git commit `07c25d552b5ad461a366b9a45eeb77ebe7ed3acf`. It uses a temporary checkout and can be run again after any failed install. It reuses complete optional-package checkouts, quarantines incomplete clones instead of deleting them, and resumes from the failed dependency step. Add `--package-models all` if you also want optional app model weights downloaded in the same run. This is very large; see [Optional Spark app packages](docs/optional-packages.md).
+This command pins both the bootstrap script and installed source tree to immutable Git commit `c355ce75648433c50ad44298910254780a8e906f`. It uses a temporary checkout and can be run again after any failed install. It reuses complete optional-package checkouts, quarantines incomplete clones instead of deleting them, and resumes from the failed dependency step. Add `--package-models all` if you also want optional app model weights downloaded in the same run. This is very large; see [Optional Spark app packages](docs/optional-packages.md).
 
 To install the dashboard/services first and download models later:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/07c25d552b5ad461a366b9a45eeb77ebe7ed3acf/bootstrap.sh | SPARKDASHBOARD_REF=07c25d552b5ad461a366b9a45eeb77ebe7ed3acf bash -s -- --skip-model-download --start dashboard
+curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/c355ce75648433c50ad44298910254780a8e906f/bootstrap.sh | SPARKDASHBOARD_REF=c355ce75648433c50ad44298910254780a8e906f bash -s -- --skip-model-download --start dashboard
 sparkdashboard-download-models qwen,ornith,mistral --model-dir ~/models/hf
 ```
 
@@ -75,7 +75,7 @@ Use these providers in OpenCode if you also configure OpenCode against this Spar
 ## Custom install options
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/07c25d552b5ad461a366b9a45eeb77ebe7ed3acf/bootstrap.sh | SPARKDASHBOARD_REF=07c25d552b5ad461a366b9a45eeb77ebe7ed3acf bash -s -- \
+curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/c355ce75648433c50ad44298910254780a8e906f/bootstrap.sh | SPARKDASHBOARD_REF=c355ce75648433c50ad44298910254780a8e906f bash -s -- \
   --install-root /opt/spark-dashboard \
   --model-dir /home/$USER/models/hf \
   --public-host my-spark.local \
