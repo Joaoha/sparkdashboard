@@ -69,12 +69,12 @@ You can choose another directory with `--model-dir`.
 On the new Spark:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/c355ce75648433c50ad44298910254780a8e906f/bootstrap.sh | SPARKDASHBOARD_REF=c355ce75648433c50ad44298910254780a8e906f bash -s -- --packages all --start dashboard
+curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/0c25853e7fd8b27121524549979629c3e06745f2/bootstrap.sh | SPARKDASHBOARD_REF=0c25853e7fd8b27121524549979629c3e06745f2 bash -s -- --packages all --start dashboard
 ```
 
 Add `--package-models all` if this fresh machine should also download optional app model weights in the same run.
 
-The command pins both the bootstrap script and installed source tree to immutable Git commit `c355ce75648433c50ad44298910254780a8e906f`. The bootstrap checks out that installer revision in a disposable temporary directory, so it is safe to rerun after an interrupted or failed install. It prompts before downloading text models and shows the per-model disk estimates; choose `all`, `none`, or a comma-separated subset such as `qwen,mistral`. The default is `none`, making large downloads opt-in. For unattended runs, pass `--models all`, `--models none`, or `--models qwen,mistral` explicitly. Completed optional-package Git checkouts are reused; a partial clone is preserved as a timestamped `.interrupted-clone-*` sibling and replaced with a clean retry.
+The command pins both the bootstrap script and installed source tree to immutable Git commit `0c25853e7fd8b27121524549979629c3e06745f2`. The bootstrap checks out that installer revision in a disposable temporary directory, so it is safe to rerun after an interrupted or failed install. It prompts before downloading text models and shows the per-model disk estimates; choose `all`, `none`, or a comma-separated subset such as `qwen,mistral`. The default is `none`, making large downloads opt-in. For unattended runs, pass `--models all`, `--models none`, or `--models qwen,mistral` explicitly. Completed optional-package Git checkouts are reused; a partial clone is preserved as a timestamped `.interrupted-clone-*` sibling and replaced with a clean retry.
 
 This will:
 
@@ -106,7 +106,7 @@ http://my-spark.local:7862
 If you want the dashboard online before downloading large model snapshots:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/c355ce75648433c50ad44298910254780a8e906f/bootstrap.sh | SPARKDASHBOARD_REF=c355ce75648433c50ad44298910254780a8e906f bash -s -- --skip-model-download --start dashboard
+curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/0c25853e7fd8b27121524549979629c3e06745f2/bootstrap.sh | SPARKDASHBOARD_REF=0c25853e7fd8b27121524549979629c3e06745f2 bash -s -- --skip-model-download --start dashboard
 ```
 
 Then download models individually:
@@ -150,7 +150,7 @@ See [Optional Spark app packages](optional-packages.md) for package names, ports
 Common custom install:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/c355ce75648433c50ad44298910254780a8e906f/bootstrap.sh | SPARKDASHBOARD_REF=c355ce75648433c50ad44298910254780a8e906f bash -s -- \
+curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/0c25853e7fd8b27121524549979629c3e06745f2/bootstrap.sh | SPARKDASHBOARD_REF=0c25853e7fd8b27121524549979629c3e06745f2 bash -s -- \
   --install-root /opt/spark-dashboard \
   --model-dir /data/models/hf \
   --public-host my-spark.local \
@@ -185,7 +185,7 @@ Installer options:
 Dry-run example:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/c355ce75648433c50ad44298910254780a8e906f/bootstrap.sh | SPARKDASHBOARD_REF=c355ce75648433c50ad44298910254780a8e906f bash -s -- --dry-run --models none --start none \
+curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/0c25853e7fd8b27121524549979629c3e06745f2/bootstrap.sh | SPARKDASHBOARD_REF=0c25853e7fd8b27121524549979629c3e06745f2 bash -s -- --dry-run --models none --start none \
   --install-root /tmp/spark-dashboard-test \
   --model-dir /tmp/spark-models \
   --public-host spark-test.local \
@@ -431,7 +431,7 @@ Qwen and Ornith benchmarks use no-think style prompts. Mistral does not accept Q
 On the Spark:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/c355ce75648433c50ad44298910254780a8e906f/bootstrap.sh | SPARKDASHBOARD_REF=c355ce75648433c50ad44298910254780a8e906f bash -s -- --skip-model-download --start dashboard
+curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/0c25853e7fd8b27121524549979629c3e06745f2/bootstrap.sh | SPARKDASHBOARD_REF=0c25853e7fd8b27121524549979629c3e06745f2 bash -s -- --skip-model-download --start dashboard
 ```
 
 This refreshes installed app files, scripts, and systemd units without redownloading models.
