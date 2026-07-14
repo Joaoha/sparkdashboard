@@ -286,6 +286,55 @@ class InstallerRecoveryTests(unittest.TestCase):
         self.assertIn("git fetch --depth 1 origin", completed.stdout)
         self.assertIn("decord/python", completed.stdout)
 
+    def test_install_dry_run_defaults_to_no_model_download(self):
+        """Dry-runs must not imply a surprise all-model download."""
+        env = os.environ.copy()
+        env.pop("SPARK_MODELS", None)
+        completed = subprocess.run(
+            [
+                "bash", str(REPO_ROOT / "install.sh"), "--dry-run",
+                "--packages", "none", "--start", "none",
+                "--install-root", str(self.temp / "install-root"),
+                "--model-dir", str(self.temp / "models"),
+                "--public-host", "spark-test.local", "--dashboard-port", "17862",
+            ],
+            env=env,
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("models:         none", completed.stdout)
+        self.assertIn("dry-run default", completed.stdout)
+
+    def test_install_dry_run_accepts_an_explicit_model_subset(self):
+        completed = subprocess.run(
+            [
+                "bash", str(REPO_ROOT / "install.sh"), "--dry-run",
+                "--models", "qwen,mistral", "--packages", "none", "--start", "none",
+                "--install-root", str(self.temp / "install-root"),
+                "--model-dir", str(self.temp / "models"),
+                "--public-host", "spark-test.local", "--dashboard-port", "17862",
+            ],
+            env={**os.environ, "SPARK_MODELS": "all"},
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("models:         qwen,mistral", completed.stdout)
+
+    def test_install_rejects_unknown_model_before_it_can_download(self):
+        completed = subprocess.run(
+            [
+                "bash", str(REPO_ROOT / "install.sh"), "--dry-run",
+                "--models", "qwen,not-a-model", "--packages", "none", "--start", "none",
+            ],
+            env=os.environ.copy(),
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(completed.returncode, 2)
+        self.assertIn("Unknown model(s): not-a-model", completed.stderr)
+
     def test_bootstrap_can_be_rerun_without_reusing_a_previous_checkout(self):
         """The published one-command entry point uses a new temporary checkout each time."""
         origin = self.temp / "origin"

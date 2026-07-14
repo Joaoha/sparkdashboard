@@ -6,7 +6,8 @@ MODEL_DIR=${SPARK_MODEL_DIR:-$HOME/models/hf}
 PUBLIC_HOST=${SPARK_PUBLIC_HOST:-$(hostname -f 2>/dev/null || hostname)}
 DASHBOARD_PORT=${SPARK_DASHBOARD_PORT:-7862}
 VLLM_IMAGE=${SPARK_VLLM_IMAGE:-vllm/vllm-openai:nightly}
-MODELS=${SPARK_MODELS:-all}
+MODELS=${SPARK_MODELS:-}
+MODEL_SELECTION_NOTE=""
 START=${SPARK_START:-dashboard}
 INSTALL_DOCKER=${SPARK_INSTALL_DOCKER:-auto}
 PACKAGES=${SPARK_PACKAGES:-none}
@@ -24,7 +25,8 @@ Options:
   --model-dir PATH          Default: ~/models/hf
   --public-host HOST        Default: hostname -f
   --dashboard-port PORT     Default: 7862
-  --models LIST             all|none|qwen,ornith,mistral (default: all)
+  --models LIST             all|none|qwen,ornith,mistral; omitted = interactive picker
+                          (default choice: none, so large downloads are opt-in)
   --packages LIST           all|none or comma list of optional apps (default: none)
   --package-models LIST     all|none or comma list; download optional package weights (default: none)
   --skip-package-deps       Copy/clone optional packages only; skip apt/pip deps
@@ -71,6 +73,84 @@ if ! require_cmd python3; then
   exit 1
 fi
 
+normalize_models() {
+  python3 - "$REPO_DIR/config/models.json" "$1" <<'PY'
+import json
+import sys
+
+manifest = json.loads(open(sys.argv[1], encoding="utf-8").read())["models"]
+raw = sys.argv[2].strip().lower()
+if raw in {"all", "text", "none"}:
+    print(raw)
+    raise SystemExit(0)
+if not raw:
+    print("none")
+    raise SystemExit(0)
+chosen = [item.strip().lower() for item in raw.split(",") if item.strip()]
+bad = [item for item in chosen if item not in manifest]
+if bad:
+    print(
+        f"Unknown model(s): {', '.join(bad)}. Valid: all, none, {', '.join(manifest)}",
+        file=sys.stderr,
+    )
+    raise SystemExit(2)
+# Preserve order while making repeated choices harmless.
+print(",".join(dict.fromkeys(chosen)))
+PY
+}
+
+choose_models_interactively() {
+  if [ ! -r /dev/tty ] || [ ! -w /dev/tty ]; then
+    echo "No --models selection was supplied and no interactive terminal is available." >&2
+    echo "Pass --models all, --models none, or a subset such as --models qwen,mistral." >&2
+    exit 2
+  fi
+
+  python3 - "$REPO_DIR/config/models.json" >/dev/tty <<'PY'
+import json
+import sys
+models = json.loads(open(sys.argv[1], encoding="utf-8").read())["models"]
+print("\nSelect text-model snapshots to download:")
+total = 0
+for key, meta in models.items():
+    disk = int(meta["estimated_disk_gib"])
+    total += disk
+    print(f"  {key:<8} {disk:>3} GiB  {meta['description']}")
+print(f"  all      {total:>3} GiB  every listed text model")
+print("  none       0 GiB  install the dashboard/services only; download later")
+print("Enter all, none, or a comma-separated subset (for example: qwen,mistral).")
+PY
+
+  while true; do
+    printf "Model selection [none]: " >/dev/tty
+    IFS= read -r response </dev/tty || {
+      echo "Could not read a model selection from the terminal." >&2
+      exit 2
+    }
+    if [ -z "$response" ]; then
+      response="none"
+    fi
+    if MODELS=$(normalize_models "$response"); then
+      printf "Selected models: %s\n" "$MODELS" >/dev/tty
+      return 0
+    fi
+    printf "Choose all, none, or valid comma-separated model names.\n" >/dev/tty
+  done
+}
+
+if [ -z "$MODELS" ]; then
+  if [ "$DRY_RUN" = "1" ]; then
+    MODELS=none
+    MODEL_SELECTION_NOTE="No --models selection supplied; using none as the dry-run default."
+  else
+    choose_models_interactively
+  fi
+fi
+
+if ! MODELS=$(normalize_models "$MODELS"); then
+  exit 2
+fi
+
 if [ "$DRY_RUN" = "1" ]; then
   echo "Spark Dashboard dry run"
   echo "  repo:           $REPO_DIR"
@@ -83,6 +163,9 @@ if [ "$DRY_RUN" = "1" ]; then
   echo "  package models: $PACKAGE_MODELS"
   echo "  pixal3d trellis:$BUILD_PIXAL3D_TRELLIS"
   echo "  start:          $START"
+  if [ -n "$MODEL_SELECTION_NOTE" ]; then
+    echo "  note:           $MODEL_SELECTION_NOTE"
+  fi
   tmp=$(mktemp -d)
   python3 - "$REPO_DIR" "$tmp" "$INSTALL_ROOT" "$MODEL_DIR" "$PUBLIC_HOST" "$DASHBOARD_PORT" "$VLLM_IMAGE" <<'PY'
 from pathlib import Path

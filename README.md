@@ -20,10 +20,10 @@ Optional app packages: [Optional Spark app packages](docs/optional-packages.md)
 ## One-command install on a fresh Spark
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/c355ce75648433c50ad44298910254780a8e906f/bootstrap.sh | SPARKDASHBOARD_REF=c355ce75648433c50ad44298910254780a8e906f bash -s -- --models all --packages all --start dashboard
+curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/c355ce75648433c50ad44298910254780a8e906f/bootstrap.sh | SPARKDASHBOARD_REF=c355ce75648433c50ad44298910254780a8e906f bash -s -- --packages all --start dashboard
 ```
 
-This command pins both the bootstrap script and installed source tree to immutable Git commit `c355ce75648433c50ad44298910254780a8e906f`. It uses a temporary checkout and can be run again after any failed install. It reuses complete optional-package checkouts, quarantines incomplete clones instead of deleting them, and resumes from the failed dependency step. Add `--package-models all` if you also want optional app model weights downloaded in the same run. This is very large; see [Optional Spark app packages](docs/optional-packages.md).
+This command pins both the bootstrap script and installed source tree to immutable Git commit `c355ce75648433c50ad44298910254780a8e906f`. It uses a temporary checkout and can be run again after failure. Before any model download, it presents an interactive choice with each model's disk estimate; enter `all`, `none`, or a subset such as `qwen,mistral`. The default selection is `none`, so large downloads are opt-in. For unattended installs, pass `--models all`, `--models none`, or a comma-separated subset explicitly. It reuses complete optional-package checkouts, quarantines incomplete clones instead of deleting them, and resumes from failed dependency steps. Add `--package-models all` if you also want optional app model weights downloaded in the same run.
 
 To install the dashboard/services first and download models later:
 

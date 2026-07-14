@@ -69,12 +69,12 @@ You can choose another directory with `--model-dir`.
 On the new Spark:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/c355ce75648433c50ad44298910254780a8e906f/bootstrap.sh | SPARKDASHBOARD_REF=c355ce75648433c50ad44298910254780a8e906f bash -s -- --models all --packages all --start dashboard
+curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/c355ce75648433c50ad44298910254780a8e906f/bootstrap.sh | SPARKDASHBOARD_REF=c355ce75648433c50ad44298910254780a8e906f bash -s -- --packages all --start dashboard
 ```
 
 Add `--package-models all` if this fresh machine should also download optional app model weights in the same run.
 
-The command pins both the bootstrap script and installed source tree to immutable Git commit `c355ce75648433c50ad44298910254780a8e906f`. The bootstrap checks out that installer revision in a disposable temporary directory, so it is safe to rerun after an interrupted or failed install. Completed optional-package Git checkouts are reused; a partial clone is preserved as a timestamped `.interrupted-clone-*` sibling and replaced with a clean retry.
+The command pins both the bootstrap script and installed source tree to immutable Git commit `c355ce75648433c50ad44298910254780a8e906f`. The bootstrap checks out that installer revision in a disposable temporary directory, so it is safe to rerun after an interrupted or failed install. It prompts before downloading text models and shows the per-model disk estimates; choose `all`, `none`, or a comma-separated subset such as `qwen,mistral`. The default is `none`, making large downloads opt-in. For unattended runs, pass `--models all`, `--models none`, or `--models qwen,mistral` explicitly. Completed optional-package Git checkouts are reused; a partial clone is preserved as a timestamped `.interrupted-clone-*` sibling and replaced with a clean retry.
 
 This will:
 
@@ -167,6 +167,7 @@ Installer options:
 | `--model-dir PATH` | Parent directory for model snapshots. Default `~/models/hf` |
 | `--public-host HOST` | Hostname used in dashboard links. Default `hostname -f` or `hostname` |
 | `--dashboard-port PORT` | Dashboard port. Default `7862` |
+| omit `--models` | Interactive picker; default selection is `none` |
 | `--models all` | Download all known text models |
 | `--packages all` | Install all optional Spark app package scaffolding/dependencies |
 | `--package-models all` | Also download optional app model weights where implemented |
