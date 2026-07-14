@@ -46,6 +46,8 @@ sparkdashboard-install-packages z-image,qwen-image,flux2,krea2 --skip-deps --dow
 | `un0` | `un0-web.service` | 7870 | Upstream Un-0 plus bundled Spark WebUI |
 | `triposplat` | `triposplat-web.service` | 7871 | Upstream TripoSplat plus bundled Spark WebUI |
 
+**Linux ARM64 note:** Agent3Dify is not currently installable natively because its locked `cadquery-ocp` dependency has no Linux ARM64 artifact. `--packages all` reports and skips it so the remaining packages can finish; explicitly selecting `agent3dify` fails early with this reason.
+
 ## What the optional installer does
 
 For each selected package, `scripts/install_packages.py` will:

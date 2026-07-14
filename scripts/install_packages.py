@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import platform
 import re
 import shutil
 import subprocess
@@ -60,6 +61,17 @@ def parse_selection(value: str) -> list[str]:
     if bad:
         raise SystemExit(f"Unknown package(s): {', '.join(bad)}. Valid: {', '.join(keys)}")
     return chosen
+
+
+def unsupported_package_reason(key: str) -> str | None:
+    """Return a host-platform blocker for optional packages without ARM builds."""
+    machine = platform.machine().lower()
+    if key == "agent3dify" and sys.platform == "linux" and machine in {"aarch64", "arm64"}:
+        return (
+            "Agent3Dify requires Python >=3.13 and its locked cadquery-ocp dependency "
+            "does not publish a Linux ARM64 wheel or source distribution."
+        )
+    return None
 
 
 def run(cmd: list[str], *, sudo: bool = False, cwd: Path | None = None, dry_run: bool = False, env: dict[str, str] | None = None) -> None:
@@ -505,9 +517,19 @@ def main() -> int:
         print("No optional packages selected.")
         return 0
     if args.build_pixal3d_trellis and "pixal3d" not in selected:
-        raise SystemExit("--build-pixal3d-trellis requires selecting the pixal3d package")
+        raise SystemExit("--build-pixal3d-trellis requires selecting pixal3d package")
+    skipped: list[tuple[str, str]] = []
     for key in selected:
+        reason = unsupported_package_reason(key)
+        if reason:
+            if args.packages != "all":
+                raise SystemExit(f"Cannot install {key} on this host: {reason}")
+            skipped.append((key, reason))
+            print(f"SKIP optional package {key}: {reason}")
+            continue
         install_package(key, download_models=args.download_models, skip_deps=args.skip_deps, build_pixal3d_trellis_flag=args.build_pixal3d_trellis, dry_run=args.dry_run)
+    if skipped:
+        print("\nSkipped unsupported optional package(s): " + ", ".join(key for key, _reason in skipped))
     print("\nOptional package install step complete. Units are installed by install.sh; start services with systemctl --user start <unit>.")
     return 0
 

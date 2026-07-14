@@ -332,6 +332,31 @@ class InstallerRecoveryTests(unittest.TestCase):
         self.assertNotEqual(completed.returncode, 0)
         self.assertIn("40-character commit SHA", completed.stderr)
 
+    def test_agent3dify_is_skipped_by_all_on_linux_arm64(self):
+        """A package lacking ARM64 artifacts cannot abort every optional package."""
+        installed: list[str] = []
+        with (
+            patch.object(self.installer.sys, "argv", ["install_packages.py", "all"]),
+            patch.object(self.installer.sys, "platform", "linux"),
+            patch.object(self.installer.platform, "machine", return_value="aarch64"),
+            patch.object(self.installer, "install_package", side_effect=lambda key, **_kwargs: installed.append(key)),
+        ):
+            self.assertEqual(self.installer.main(), 0)
+
+        self.assertNotIn("agent3dify", installed)
+        self.assertIn("domainshuttle", installed)
+
+    def test_agent3dify_explicit_selection_fails_early_on_linux_arm64(self):
+        """Explicitly requesting an unsupported package must give a clear error."""
+        with (
+            patch.object(self.installer.sys, "argv", ["install_packages.py", "agent3dify"]),
+            patch.object(self.installer.sys, "platform", "linux"),
+            patch.object(self.installer.platform, "machine", return_value="aarch64"),
+            patch.object(self.installer, "install_package"),
+        ):
+            with self.assertRaisesRegex(SystemExit, "cadquery-ocp"):
+                self.installer.main()
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
