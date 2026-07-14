@@ -260,6 +260,8 @@ def install_package(key: str, *, download_models: bool, skip_deps: bool, build_p
             clone_repo(meta["repo"], root, meta.get("branch"), dry_run=dry_run)
         py = venv_python(root, dry_run=dry_run)
         if not skip_deps:
+            run(["apt-get", "update", "-qq"], sudo=True, dry_run=dry_run)
+            run(["apt-get", "install", "-y", "pkg-config", "libopus-dev"], sudo=True, dry_run=dry_run)
             install_torch(py, dry_run=dry_run)
             req = root / "moshi/requirements.txt"
             if req.exists() or dry_run:
