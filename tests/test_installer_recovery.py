@@ -156,6 +156,12 @@ class InstallerRecoveryTests(unittest.TestCase):
             "decord[torch]\ndecord @ git+https://example.invalid/decord.git\n"
             "-r shared-requirements.txt\ntimm\n"
         )
+        decord_header = root / "decord/src/video/ffmpeg/ffmpeg_common.h"
+        decord_header.parent.mkdir(parents=True)
+        decord_header.write_text("#include <libavcodec/avcodec.h>\n")
+        decord_reader = root / "decord/src/video/video_reader.cc"
+        decord_reader.parent.mkdir(parents=True, exist_ok=True)
+        decord_reader.write_text("AVCodec *dec;\n")
         events: list[tuple[str, list[str]]] = []
         clone_calls: list[tuple[str, Path, bool]] = []
         manifest = dict(self.installer.MANIFEST)
@@ -187,6 +193,8 @@ class InstallerRecoveryTests(unittest.TestCase):
 
         filtered = root / ".spark-domainshuttle-requirements.txt"
         self.assertEqual(filtered.read_text().splitlines(), ["numpy", "-r shared-requirements.txt", "timm"])
+        self.assertIn("#include <libavcodec/bsf.h>", decord_header.read_text())
+        self.assertIn("const AVCodec *dec;", decord_reader.read_text())
         self.assertIn(
             ("https://github.com/dmlc/decord.git", root / "decord", True),
             clone_calls,
@@ -203,6 +211,34 @@ class InstallerRecoveryTests(unittest.TestCase):
         self.assertLess(cmake_indices[0], cmake_indices[-1])
         self.assertLess(cmake_indices[-1], binding_index)
         self.assertLess(binding_index, import_index)
+
+    def test_decord_ffmpeg_compatibility_patch_includes_bsf_header(self):
+        """Decord omits bsf.h although it uses AVBSFContext on modern FFmpeg."""
+        decord_root = self.temp / "decord"
+        header = decord_root / "src/video/ffmpeg/ffmpeg_common.h"
+        header.parent.mkdir(parents=True)
+        header.write_text("#include <libavcodec/avcodec.h>\n#include <libavformat/avformat.h>\n")
+
+        self.installer.patch_decord_ffmpeg_bsf_header(decord_root)
+        self.installer.patch_decord_ffmpeg_bsf_header(decord_root)
+
+        lines = header.read_text().splitlines()
+        self.assertIn("#include <libavcodec/bsf.h>", lines)
+        self.assertEqual(lines.count("#include <libavcodec/bsf.h>"), 1)
+        self.assertEqual(lines.index("#include <libavcodec/bsf.h>"), lines.index("#include <libavcodec/avcodec.h>") + 1)
+
+    def test_decord_ffmpeg_compatibility_patch_uses_const_codec(self):
+        """FFmpeg 5+ requires av_find_best_stream's codec pointer to be const."""
+        decord_root = self.temp / "decord"
+        source = decord_root / "src/video/video_reader.cc"
+        source.parent.mkdir(parents=True)
+        source.write_text("void f() {\n    AVCodec *dec;\n}\n")
+
+        self.installer.patch_decord_ffmpeg_codec_const(decord_root)
+        self.installer.patch_decord_ffmpeg_codec_const(decord_root)
+
+        self.assertIn("const AVCodec *dec;", source.read_text())
+        self.assertNotIn("\n    AVCodec *dec;", source.read_text())
 
     def test_domainshuttle_dry_run_shows_decord_build_steps(self):
         """A clean-host dry-run must expose the Decord source-build work."""

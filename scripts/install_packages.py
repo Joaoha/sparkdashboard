@@ -186,6 +186,42 @@ def clone_repo(url: str, dest: Path, branch: str | None, *, dry_run: bool, recur
     run(cmd, dry_run=dry_run)
 
 
+def patch_decord_ffmpeg_bsf_header(decord_root: Path, *, dry_run: bool = False) -> None:
+    """Apply the upstream-known FFmpeg bitstream-filter include fix.
+
+    Decord's pinned source declares ``AVBSFContext`` but omits ``bsf.h``. Newer
+    Debian/Ubuntu FFmpeg headers do not expose that declaration transitively.
+    """
+    header = decord_root / "src/video/ffmpeg/ffmpeg_common.h"
+    include = "#include <libavcodec/bsf.h>"
+    marker = "#include <libavcodec/avcodec.h>"
+    if dry_run:
+        print(f"patch {header}: add {include}")
+        return
+    text = header.read_text()
+    if include in text:
+        return
+    if marker not in text:
+        raise RuntimeError(f"Cannot apply Decord FFmpeg compatibility patch; marker missing: {header}")
+    header.write_text(text.replace(marker, f"{marker}\n{include}", 1))
+
+
+def patch_decord_ffmpeg_codec_const(decord_root: Path, *, dry_run: bool = False) -> None:
+    """Apply the FFmpeg 5+ const-correct decoder pointer compatibility fix."""
+    source = decord_root / "src/video/video_reader.cc"
+    old = "AVCodec *dec;"
+    new = "const AVCodec *dec;"
+    if dry_run:
+        print(f"patch {source}: use const AVCodec for av_find_best_stream")
+        return
+    text = source.read_text()
+    if new in text:
+        return
+    if old not in text:
+        raise RuntimeError(f"Cannot apply Decord FFmpeg codec compatibility patch; marker missing: {source}")
+    source.write_text(text.replace(old, new, 1))
+
+
 def build_decord_from_source(root: Path, py: Path, *, dry_run: bool) -> None:
     """Build Decord for Spark's ARM64/Python 3.12 environment.
 
@@ -201,6 +237,8 @@ def build_decord_from_source(root: Path, py: Path, *, dry_run: bool) -> None:
     run(["git", "checkout", "--detach", DECORD_COMMIT], cwd=decord_root, dry_run=dry_run)
     run(["git", "submodule", "sync", "--recursive"], cwd=decord_root, dry_run=dry_run)
     run(["git", "submodule", "update", "--init", "--recursive"], cwd=decord_root, dry_run=dry_run)
+    patch_decord_ffmpeg_bsf_header(decord_root, dry_run=dry_run)
+    patch_decord_ffmpeg_codec_const(decord_root, dry_run=dry_run)
     build_dir = decord_root / "build"
     run(
         [
