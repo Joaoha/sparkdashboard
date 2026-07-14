@@ -518,18 +518,19 @@ def main() -> int:
         return 0
     if args.build_pixal3d_trellis and "pixal3d" not in selected:
         raise SystemExit("--build-pixal3d-trellis requires selecting pixal3d package")
-    skipped: list[tuple[str, str]] = []
+    blockers = [(key, reason) for key in selected if (reason := unsupported_package_reason(key))]
+    if blockers and args.packages != "all":
+        key, reason = blockers[0]
+        raise SystemExit(f"Cannot install {key} on this host: {reason}")
+    skipped = dict(blockers)
+    for key, reason in blockers:
+        print(f"SKIP optional package {key}: {reason}")
     for key in selected:
-        reason = unsupported_package_reason(key)
-        if reason:
-            if args.packages != "all":
-                raise SystemExit(f"Cannot install {key} on this host: {reason}")
-            skipped.append((key, reason))
-            print(f"SKIP optional package {key}: {reason}")
+        if key in skipped:
             continue
         install_package(key, download_models=args.download_models, skip_deps=args.skip_deps, build_pixal3d_trellis_flag=args.build_pixal3d_trellis, dry_run=args.dry_run)
     if skipped:
-        print("\nSkipped unsupported optional package(s): " + ", ".join(key for key, _reason in skipped))
+        print("\nSkipped unsupported optional package(s): " + ", ".join(skipped))
     print("\nOptional package install step complete. Units are installed by install.sh; start services with systemctl --user start <unit>.")
     return 0
 

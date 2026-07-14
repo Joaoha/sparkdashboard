@@ -344,18 +344,34 @@ class InstallerRecoveryTests(unittest.TestCase):
             self.assertEqual(self.installer.main(), 0)
 
         self.assertNotIn("agent3dify", installed)
-        self.assertIn("domainshuttle", installed)
+        self.assertIn("triposplat", installed)
 
-    def test_agent3dify_explicit_selection_fails_early_on_linux_arm64(self):
-        """Explicitly requesting an unsupported package must give a clear error."""
+    def test_agent3dify_explicit_selection_preflights_on_linux_arm64(self):
+        """A mixed explicit selection must fail before installing any package."""
+        installed: list[str] = []
         with (
-            patch.object(self.installer.sys, "argv", ["install_packages.py", "agent3dify"]),
+            patch.object(self.installer.sys, "argv", ["install_packages.py", "z-image,agent3dify"]),
             patch.object(self.installer.sys, "platform", "linux"),
             patch.object(self.installer.platform, "machine", return_value="aarch64"),
-            patch.object(self.installer, "install_package"),
+            patch.object(self.installer, "install_package", side_effect=lambda key, **_kwargs: installed.append(key)),
         ):
             with self.assertRaisesRegex(SystemExit, "cadquery-ocp"):
                 self.installer.main()
+
+        self.assertEqual(installed, [])
+
+    def test_agent3dify_remains_selectable_on_linux_x86_64(self):
+        """The ARM64 guard must not block Agent3Dify on supported Linux x86_64."""
+        installed: list[str] = []
+        with (
+            patch.object(self.installer.sys, "argv", ["install_packages.py", "agent3dify"]),
+            patch.object(self.installer.sys, "platform", "linux"),
+            patch.object(self.installer.platform, "machine", return_value="x86_64"),
+            patch.object(self.installer, "install_package", side_effect=lambda key, **_kwargs: installed.append(key)),
+        ):
+            self.assertEqual(self.installer.main(), 0)
+
+        self.assertEqual(installed, ["agent3dify"])
 
 
 if __name__ == "__main__":
