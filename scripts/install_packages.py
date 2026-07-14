@@ -165,6 +165,12 @@ def clone_repo(url: str, dest: Path, branch: str | None, *, dry_run: bool, recur
             # user-writable install root should stay non-interactive.
             needs_sudo = not os.access(dest.parent, os.W_OK | os.X_OK)
             run(["mv", str(dest), str(backup)], sudo=needs_sudo, dry_run=dry_run)
+            if needs_sudo:
+                # Moving an install-root checkout out of /opt also removes the
+                # user-owned clone destination. Recreate it before git runs.
+                user = os.environ.get("SUDO_USER") or os.environ.get("USER") or "joao"
+                run(["install", "-d", "-m", "0755", str(dest)], sudo=True, dry_run=dry_run)
+                run(["chown", f"{user}:{user}", str(dest)], sudo=True, dry_run=dry_run)
     cmd = ["git", "clone", "--depth", "1"]
     if recursive:
         cmd.append("--recursive")

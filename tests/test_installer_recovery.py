@@ -122,6 +122,30 @@ class InstallerRecoveryTests(unittest.TestCase):
         self.assertFalse(move[1]["sudo"], "a user-writable test/install parent must not require sudo")
         self.assertTrue(any(cmd[:2] == ["git", "clone"] for cmd, _kwargs in calls), calls)
 
+    def test_quarantine_recreates_a_root_clone_destination_under_opt(self):
+        """After sudo moves /opt/<app>, the installer must recreate it for Git."""
+        dest = self.temp / "personaplex-bnb4"
+        (dest / ".git").mkdir(parents=True)
+        (dest / "partial-file").write_text("partial\n")
+        calls: list[tuple[list[str], dict]] = []
+
+        def record_run(cmd, **kwargs):
+            calls.append((list(cmd), kwargs))
+
+        with (
+            patch.object(self.installer, "run", side_effect=record_run),
+            patch.object(self.installer.os, "access", return_value=False),
+        ):
+            self.installer.clone_repo("https://example.invalid/personaplex.git", dest, None, dry_run=False)
+
+        move_index = next(i for i, (cmd, _kwargs) in enumerate(calls) if cmd[0] == "mv")
+        install_index = next(i for i, (cmd, _kwargs) in enumerate(calls) if cmd[:3] == ["install", "-d", "-m"] and cmd[-1] == str(dest))
+        clone_index = next(i for i, (cmd, _kwargs) in enumerate(calls) if cmd[:2] == ["git", "clone"])
+        self.assertTrue(calls[move_index][1]["sudo"])
+        self.assertTrue(calls[install_index][1]["sudo"])
+        self.assertLess(move_index, install_index)
+        self.assertLess(install_index, clone_index)
+
     def test_bootstrap_can_be_rerun_without_reusing_a_previous_checkout(self):
         """The published one-command entry point uses a new temporary checkout each time."""
         origin = self.temp / "origin"
