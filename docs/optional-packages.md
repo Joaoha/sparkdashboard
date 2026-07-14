@@ -90,7 +90,7 @@ sparkdashboard-install-packages pixal3d --build-pixal3d-trellis
 Or as part of the one-command base installation:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/24fca5306972211b2968777176e8a367c67717a9/bootstrap.sh | SPARKDASHBOARD_REF=24fca5306972211b2968777176e8a367c67717a9 bash -s -- --skip-model-download --packages pixal3d --build-pixal3d-trellis --start dashboard
+curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/07c25d552b5ad461a366b9a45eeb77ebe7ed3acf/bootstrap.sh | SPARKDASHBOARD_REF=07c25d552b5ad461a366b9a45eeb77ebe7ed3acf bash -s -- --skip-model-download --packages pixal3d --build-pixal3d-trellis --start dashboard
 ```
 
 Dry-run all packages:
