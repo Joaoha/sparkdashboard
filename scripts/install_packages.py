@@ -7,6 +7,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -88,12 +89,46 @@ def install_torch(py: Path, *, dry_run: bool) -> None:
     run([str(py), "-m", "pip", "install", "--index-url", "https://download.pytorch.org/whl/cu130", "torch", "torchvision", "torchaudio"], dry_run=dry_run)
 
 
+def is_complete_git_checkout(path: Path) -> bool:
+    """Return True only if a checkout has a usable HEAD commit.
+
+    Interrupted ``git clone`` operations can leave a ``.git`` directory behind.
+    Checking merely for that path makes every later installer retry fail during
+    fetch/checkout instead of recovering the clone.
+    """
+    if not (path / ".git").exists():
+        return False
+    work_tree = subprocess.run(
+        ["git", "-C", str(path), "rev-parse", "--is-inside-work-tree"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    head = subprocess.run(
+        ["git", "-C", str(path), "rev-parse", "--verify", "HEAD"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    return work_tree.returncode == 0 and work_tree.stdout.strip() == "true" and head.returncode == 0
+
+
+def interrupted_clone_backup_path(dest: Path) -> Path:
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    candidate = dest.parent / f".{dest.name}.interrupted-clone-{stamp}"
+    suffix = 1
+    while candidate.exists():
+        candidate = dest.parent / f".{dest.name}.interrupted-clone-{stamp}-{suffix}"
+        suffix += 1
+    return candidate
+
+
 def clone_repo(url: str, dest: Path, branch: str | None, *, dry_run: bool, recursive: bool = False) -> None:
-    if dest.exists() and (dest / ".git").exists():
-        run(["git", "fetch", "--depth", "1", "origin"], cwd=dest, dry_run=dry_run)
-        if branch:
-            run(["git", "checkout", branch], cwd=dest, dry_run=dry_run)
-            run(["git", "pull", "--ff-only", "origin", branch], cwd=dest, dry_run=dry_run)
+    if dest.exists() and is_complete_git_checkout(dest):
+        # A retry should not depend on GitHub/upstream being reachable again.
+        # The bootstrap installer supplies the latest Dashboard code; reusing a
+        # complete package checkout is sufficient to resume dependency installs.
+        print(f"reuse existing checkout {dest}")
         if recursive:
             run(["git", "submodule", "update", "--init", "--recursive"], cwd=dest, dry_run=dry_run)
         return
@@ -108,6 +143,13 @@ def clone_repo(url: str, dest: Path, branch: str | None, *, dry_run: bool, recur
             print(f"remove stale pre-clone venv {entries[0]}")
             if not dry_run:
                 shutil.rmtree(entries[0])
+        elif entries:
+            # Do not delete an interrupted checkout. Preserve it next to the
+            # install target, then perform a clean clone so retrying remains a
+            # one-command operation.
+            backup = interrupted_clone_backup_path(dest)
+            print(f"quarantine incomplete clone {dest} -> {backup}")
+            run(["mv", str(dest), str(backup)], sudo=True, dry_run=dry_run)
     cmd = ["git", "clone", "--depth", "1"]
     if recursive:
         cmd.append("--recursive")
@@ -256,8 +298,7 @@ def install_package(key: str, *, download_models: bool, skip_deps: bool, build_p
     elif key == "personaplex":
         # The live BNB4 install is a Hugging Face git repo with the quantized
         # checkpoint. This may require git-lfs/HF auth.
-        if not (root / ".git").exists():
-            clone_repo(meta["repo"], root, meta.get("branch"), dry_run=dry_run)
+        clone_repo(meta["repo"], root, meta.get("branch"), dry_run=dry_run)
         py = venv_python(root, dry_run=dry_run)
         if not skip_deps:
             run(["apt-get", "update", "-qq"], sudo=True, dry_run=dry_run)
@@ -284,11 +325,12 @@ def install_package(key: str, *, download_models: bool, skip_deps: bool, build_p
                 run([str(py), "-m", "pip", "install", "--no-deps", str(moshi)], dry_run=dry_run)
 
     elif key == "pixal3d":
+        if not skip_deps:
+            run(["apt-get", "update", "-qq"], sudo=True, dry_run=dry_run)
+            run(["apt-get", "install", "-y", "git", "cmake", "ninja-build", "build-essential", "python3.12-dev", "python3.12-venv", "libx11-dev", "libegl1-mesa-dev", "libgl1-mesa-dev", "libxext-dev"], sudo=True, dry_run=dry_run)
         clone_repo(meta["repo"], root, meta.get("branch"), dry_run=dry_run)
         py = venv_python(root, dry_run=dry_run)
         if not skip_deps:
-            run(["apt-get", "update", "-qq"], sudo=True, dry_run=dry_run)
-            run(["apt-get", "install", "-y", "git", "cmake", "ninja-build", "build-essential", "python3.12-venv", "libx11-dev", "libegl1-mesa-dev", "libgl1-mesa-dev", "libxext-dev"], sudo=True, dry_run=dry_run)
             install_torch(py, dry_run=dry_run)
             req = root / "requirements.txt"
             if req.exists() or dry_run:

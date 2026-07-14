@@ -20,15 +20,15 @@ Optional app packages: [Optional Spark app packages](docs/optional-packages.md)
 ## One-command install on a fresh Spark
 
 ```bash
-git clone https://github.com/joaoha/sparkdashboard.git && cd sparkdashboard && ./install.sh --models all --packages all --start dashboard
+curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/main/bootstrap.sh | bash -s -- --models all --packages all --start dashboard
 ```
 
-Add `--package-models all` if you also want the optional app model weights downloaded in the same run. This is very large; see [Optional Spark app packages](docs/optional-packages.md).
+This entry point uses a temporary checkout and can be run again after any failed install. It reuses complete optional-package checkouts, quarantines incomplete clones instead of deleting them, and resumes from the failed dependency step. Add `--package-models all` if you also want optional app model weights downloaded in the same run. This is very large; see [Optional Spark app packages](docs/optional-packages.md).
 
 To install the dashboard/services first and download models later:
 
 ```bash
-git clone https://github.com/joaoha/sparkdashboard.git && cd sparkdashboard && ./install.sh --skip-model-download --start dashboard
+curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/main/bootstrap.sh | bash -s -- --skip-model-download --start dashboard
 sparkdashboard-download-models qwen,ornith,mistral --model-dir ~/models/hf
 ```
 

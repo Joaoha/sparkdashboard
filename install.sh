@@ -36,7 +36,7 @@ Options:
   -h, --help                Show this help
 
 One-command remote use:
-  git clone https://github.com/joaoha/sparkdashboard.git && cd sparkdashboard && ./install.sh --models all --packages all --start dashboard
+  curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/main/bootstrap.sh | bash -s -- --models all --packages all --start dashboard
 USAGE
 }
 
