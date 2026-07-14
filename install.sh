@@ -36,7 +36,7 @@ Options:
   -h, --help                Show this help
 
 One-command remote use:
-  curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/main/bootstrap.sh | bash -s -- --models all --packages all --start dashboard
+  See README.md for the current pinned one-command installer.
 USAGE
 }
 
