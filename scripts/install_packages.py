@@ -180,6 +180,42 @@ def clone_repo(url: str, dest: Path, branch: str | None, *, dry_run: bool, recur
     run(cmd, dry_run=dry_run)
 
 
+def build_decord_from_source(root: Path, py: Path, *, dry_run: bool) -> None:
+    """Build Decord for Spark's ARM64/Python 3.12 environment.
+
+    PyPI does not publish an aarch64 CPython 3.12 wheel, so DomainShuttle must
+    use the official Decord source instead of blindly installing its upstream
+    ``decord`` requirement.
+    """
+    decord_root = root / "decord"
+    clone_repo("https://github.com/dmlc/decord.git", decord_root, None, dry_run=dry_run, recursive=True)
+    build_dir = decord_root / "build"
+    run(
+        [
+            "cmake", "-S", str(decord_root), "-B", str(build_dir),
+            "-DUSE_CUDA=0", "-DCMAKE_BUILD_TYPE=Release",
+        ],
+        dry_run=dry_run,
+    )
+    run(["cmake", "--build", str(build_dir), "--parallel", "4"], dry_run=dry_run)
+    run([str(py), "-m", "pip", "install", "--no-deps", str(decord_root / "python")], dry_run=dry_run)
+    run([str(py), "-c", "import decord; print('decord', decord.__version__)"], dry_run=dry_run)
+
+
+def write_domainshuttle_requirements_without_decord(req: Path, filtered: Path, *, dry_run: bool) -> Path:
+    """Keep upstream dependencies but replace PyPI Decord with the source build."""
+    print(f"write {filtered} without unsupported PyPI decord")
+    if not dry_run:
+        lines = []
+        for line in req.read_text().splitlines():
+            name = line.split("#", 1)[0].strip().lower()
+            if name == "decord" or name.startswith(("decord=", "decord<", "decord>", "decord~", "decord!", "decord[")):
+                continue
+            lines.append(line)
+        filtered.write_text("\n".join(lines) + "\n")
+    return filtered
+
+
 def copy_tree(src: Path, dst: Path, *, dry_run: bool) -> None:
     print(f"copy {src} -> {dst}")
     if dry_run:
@@ -371,10 +407,25 @@ def install_package(key: str, *, download_models: bool, skip_deps: bool, build_p
             copy_tree(child, root / child.name, dry_run=dry_run)
         py = venv_python(root, dry_run=dry_run)
         if not skip_deps:
+            if key == "domainshuttle":
+                # ARM64/Python 3.12 has no PyPI Decord wheel. Install the
+                # FFmpeg headers needed for its official source build first.
+                run(["apt-get", "update", "-qq"], sudo=True, dry_run=dry_run)
+                run([
+                    "apt-get", "install", "-y", "git", "cmake", "build-essential", "python3.12-dev", "pkg-config",
+                    "libavcodec-dev", "libavfilter-dev", "libavformat-dev", "libavutil-dev", "libswscale-dev",
+                ], sudo=True, dry_run=dry_run)
             install_torch(py, dry_run=dry_run)
             req = root / "repo/requirements.txt"
             if req.exists():
-                run([str(py), "-m", "pip", "install", "-r", str(req)], dry_run=dry_run)
+                if key == "domainshuttle":
+                    filtered_req = write_domainshuttle_requirements_without_decord(
+                        req, root / ".spark-domainshuttle-requirements.txt", dry_run=dry_run
+                    )
+                    run([str(py), "-m", "pip", "install", "-r", str(filtered_req)], dry_run=dry_run)
+                    build_decord_from_source(root, py, dry_run=dry_run)
+                else:
+                    run([str(py), "-m", "pip", "install", "-r", str(req)], dry_run=dry_run)
             pip_install(py, DIFFUSERS_GIT_DEPS if key in {"un0", "triposplat"} else COMMON_WEB_DEPS, dry_run=dry_run)
             if key in {"un0", "agent3dify"}:
                 run([str(py), "-m", "pip", "install", "--no-deps", "-e", str(root / "repo")], dry_run=dry_run)

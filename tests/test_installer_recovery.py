@@ -146,6 +146,52 @@ class InstallerRecoveryTests(unittest.TestCase):
         self.assertLess(move_index, install_index)
         self.assertLess(install_index, clone_index)
 
+    def test_domainshuttle_builds_decord_from_official_source(self):
+        """ARM64/Python 3.12 must not ask PyPI for a nonexistent decord wheel."""
+        root = self.temp / "domainshuttle"
+        repo = root / "repo"
+        repo.mkdir(parents=True)
+        (repo / "requirements.txt").write_text("numpy\ndecord\ntimm\n")
+        events: list[tuple[str, list[str]]] = []
+        clone_calls: list[tuple[str, Path, bool]] = []
+        manifest = dict(self.installer.MANIFEST)
+        manifest["domainshuttle"] = {**manifest["domainshuttle"], "root": str(root)}
+
+        def record_run(cmd, **_kwargs):
+            events.append(("run", list(cmd)))
+
+        def record_clone(url, dest, _branch, *, recursive=False, **_kwargs):
+            clone_calls.append((url, dest, recursive))
+
+        with (
+            patch.object(self.installer, "MANIFEST", manifest),
+            patch.object(self.installer, "ensure_owned_dir"),
+            patch.object(self.installer, "clone_repo", side_effect=record_clone),
+            patch.object(self.installer, "copy_tree"),
+            patch.object(self.installer, "venv_python", return_value=root / ".venv/bin/python"),
+            patch.object(self.installer, "install_torch"),
+            patch.object(self.installer, "run", side_effect=record_run),
+            patch.object(self.installer, "pip_install"),
+        ):
+            self.installer.install_package(
+                "domainshuttle",
+                download_models=False,
+                skip_deps=False,
+                build_pixal3d_trellis_flag=False,
+                dry_run=False,
+            )
+
+        filtered = root / ".spark-domainshuttle-requirements.txt"
+        self.assertNotIn("decord", filtered.read_text().splitlines())
+        self.assertIn(
+            ("https://github.com/dmlc/decord.git", root / "decord", True),
+            clone_calls,
+        )
+        apt_install = next(cmd for kind, cmd in events if kind == "run" and cmd[:2] == ["apt-get", "install"])
+        self.assertIn("libavcodec-dev", apt_install)
+        self.assertTrue(any(cmd[0] == "cmake" for kind, cmd in events if kind == "run"))
+        self.assertTrue(any(cmd[:4] == [str(root / ".venv/bin/python"), "-m", "pip", "install"] and str(root / "decord/python") in cmd for kind, cmd in events if kind == "run"))
+
     def test_bootstrap_can_be_rerun_without_reusing_a_previous_checkout(self):
         """The published one-command entry point uses a new temporary checkout each time."""
         origin = self.temp / "origin"
