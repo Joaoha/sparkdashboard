@@ -6,6 +6,7 @@ After=network-online.target
 Type=simple
 WorkingDirectory={{INSTALL_ROOT}}
 Environment=SPARK_DASHBOARD_ROOT={{INSTALL_ROOT}}
+Environment=SPARK_DASHBOARD_STATE_DIR=%h/.local/state/spark-dashboard
 Environment=SPARK_DASHBOARD_HOST=0.0.0.0
 Environment=SPARK_DASHBOARD_PORT={{DASHBOARD_PORT}}
 Environment=SPARK_PUBLIC_HOST={{PUBLIC_HOST}}

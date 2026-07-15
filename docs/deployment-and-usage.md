@@ -412,13 +412,13 @@ journalctl --user -u qwen-nvfp4-vllm.service -f
 
 ## 14. Benchmarks
 
-The dashboard benchmark button targets the active text LLM. It records result history to:
+The dashboard benchmark button targets the active text LLM. It records result history in the dashboard user-state directory:
 
 ```text
-/opt/spark-dashboard/benchmarks.jsonl
+~/.local/state/spark-dashboard/benchmarks.jsonl
 ```
 
-Override with:
+The dashboard control token is stored alongside it. This keeps runtime state writable even though `/opt/spark-dashboard` is root-owned. Override the benchmark destination with:
 
 ```bash
 SPARK_BENCHMARK_PATH=/path/to/benchmarks.jsonl

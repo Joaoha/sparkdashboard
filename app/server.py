@@ -20,8 +20,9 @@ HOST = os.environ.get("SPARK_DASHBOARD_HOST", "0.0.0.0")
 PORT = int(os.environ.get("SPARK_DASHBOARD_PORT", "7862"))
 PUBLIC_HOST = os.environ.get("SPARK_PUBLIC_HOST", os.uname().nodename)
 INSTALL_ROOT = Path(os.environ.get("SPARK_DASHBOARD_ROOT", "/opt/spark-dashboard"))
-CONTROL_TOKEN_PATH = Path(os.environ.get("SPARK_CONTROL_TOKEN_PATH", str(INSTALL_ROOT / "control.token")))
-BENCHMARK_PATH = Path(os.environ.get("SPARK_BENCHMARK_PATH", str(INSTALL_ROOT / "benchmarks.jsonl")))
+STATE_DIR = Path(os.environ.get("SPARK_DASHBOARD_STATE_DIR", str(Path.home() / ".local/state/spark-dashboard")))
+CONTROL_TOKEN_PATH = Path(os.environ.get("SPARK_CONTROL_TOKEN_PATH", str(STATE_DIR / "control.token")))
+BENCHMARK_PATH = Path(os.environ.get("SPARK_BENCHMARK_PATH", str(STATE_DIR / "benchmarks.jsonl")))
 BENCHMARK_MAX_RECORDS = 200
 BENCHMARK_PROMPT = """/no_think
 You are benchmarking a local LLM. Write a concise but information-dense technical note about running multiple AI model services on a unified-memory workstation. Include practical tradeoffs, scheduling concerns, and one final recommendation. Keep writing until you have given a complete answer."""

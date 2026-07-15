@@ -14,11 +14,20 @@ from unittest.mock import patch
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 INSTALLER_PATH = REPO_ROOT / "scripts/install_packages.py"
+SERVER_PATH = REPO_ROOT / "app/server.py"
 BOOTSTRAP_PATH = REPO_ROOT / "bootstrap.sh"
 
 
 def load_installer():
     spec = importlib.util.spec_from_file_location("install_packages_under_test", INSTALLER_PATH)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_server():
+    spec = importlib.util.spec_from_file_location("spark_dashboard_server_under_test", SERVER_PATH)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -267,6 +276,15 @@ class InstallerRecoveryTests(unittest.TestCase):
 
         self.assertTrue(any(cmd[0] == "cmake" for cmd in events))
         self.assertTrue(any("decord/python" in " ".join(cmd) for cmd in events))
+
+    def test_dashboard_uses_user_state_for_benchmarks_and_control_token(self):
+        state_dir = self.temp / "dashboard-state"
+        with patch.dict(os.environ, {"SPARK_DASHBOARD_STATE_DIR": str(state_dir)}, clear=False):
+            server = load_server()
+        self.assertEqual(server.BENCHMARK_PATH, state_dir / "benchmarks.jsonl")
+        self.assertEqual(server.CONTROL_TOKEN_PATH, state_dir / "control.token")
+        unit = (REPO_ROOT / "systemd/user/spark-dashboard.service.in").read_text()
+        self.assertIn("Environment=SPARK_DASHBOARD_STATE_DIR=%h/.local/state/spark-dashboard", unit)
 
     def test_docker_command_uses_passwordless_sudo_fallback(self):
         """A user service must work immediately when Docker group membership needs a new login."""
