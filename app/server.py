@@ -214,7 +214,7 @@ LOG_CACHE_TTL_SEC = 5.0
 SERVICES = [
     {
         "key": "qwen",
-        "name": "Qwen vLLM",
+        "name": "Qwen3.6-35B-A3B-NVFP4",
         "unit": "qwen-nvfp4-vllm.service",
         "kind": "text model",
         "health_url": "http://127.0.0.1:8000/v1/models",
@@ -785,8 +785,8 @@ HTML = r'''<!doctype html>
         setField(card, 'systemd', safe(s.systemd_state).toUpperCase());
         setField(card, 'gpu', gpu);
         setField(card, 'endpoint', endpoint);
-        setField(card, 'extra-label', key === 'qwen' ? 'Context' : 'Unit');
-        setField(card, 'extra', key === 'qwen' ? safe(s.health?.model_len) : safe(s.unit));
+        setField(card, 'extra-label', 'Unit');
+        setField(card, 'extra', safe(s.unit));
         setField(card, 'log', (s.log_tail && s.log_tail.length) ? s.log_tail.join('\n') : 'No recent journal lines.');
 
         const badge = card.querySelector('[data-field="badge"]');

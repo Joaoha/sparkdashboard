@@ -277,6 +277,14 @@ class InstallerRecoveryTests(unittest.TestCase):
         self.assertTrue(any(cmd[0] == "cmake" for cmd in events))
         self.assertTrue(any("decord/python" in " ".join(cmd) for cmd in events))
 
+    def test_qwen_card_uses_its_actual_model_name_and_standard_unit_field(self):
+        server = load_server()
+        qwen = next(service for service in server.SERVICES if service["key"] == "qwen")
+        self.assertEqual(qwen["name"], "Qwen3.6-35B-A3B-NVFP4")
+        source = SERVER_PATH.read_text()
+        self.assertIn("setField(card, 'extra-label', 'Unit');", source)
+        self.assertIn("setField(card, 'extra', safe(s.unit));", source)
+
     def test_dashboard_uses_user_state_for_benchmarks_and_control_token(self):
         state_dir = self.temp / "dashboard-state"
         with patch.dict(os.environ, {"SPARK_DASHBOARD_STATE_DIR": str(state_dir)}, clear=False):
