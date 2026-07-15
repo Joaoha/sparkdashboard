@@ -228,8 +228,10 @@ if ! require_cmd docker; then
 fi
 
 if ! docker info >/dev/null 2>&1; then
-  if sudo docker info >/dev/null 2>&1; then
-    echo "Docker works via sudo, but user Docker access is not active. Add user to docker group or re-login. Continuing for file install; services may need group membership."
+  if sudo -n docker info >/dev/null 2>&1; then
+    echo "Docker works via passwordless sudo, but user Docker access is not active. Text-model services will use the sudo Docker fallback until the next login applies docker-group membership."
+  elif sudo docker info >/dev/null 2>&1; then
+    echo "Docker only works through interactive sudo. Add user to docker group and log out/in before starting text-model services; user services cannot answer a sudo password prompt." >&2
   else
     echo "Docker daemon is not reachable." >&2
     exit 1

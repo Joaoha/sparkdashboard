@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+DOCKER="$SCRIPT_DIR/docker-command.sh"
 MODEL_DIR=${SPARK_MODEL_DIR:-$HOME/models/hf}
 VLLM_IMAGE=${SPARK_VLLM_IMAGE:-vllm/vllm-openai:nightly}
 MAX_MODEL_LEN=${MISTRAL_MAX_MODEL_LEN:-37888}
@@ -15,8 +17,8 @@ fi
 for svc in qwen-nvfp4-vllm.service ornith-vllm.service krea-2.service qwen-image.service z-image.service flux2.service hidream-o1.service domainshuttle-web.service; do
   systemctl --user stop "$svc" >/dev/null 2>&1 || true
 done
-docker rm -f qwen-nvfp4-vllm ornith-vllm mistral-medium-vllm >/dev/null 2>&1 || true
-exec docker run --rm --init \
+"$DOCKER" rm -f qwen-nvfp4-vllm ornith-vllm mistral-medium-vllm >/dev/null 2>&1 || true
+exec "$DOCKER" run --rm --init \
   --name mistral-medium-vllm \
   --gpus all \
   --ipc=host \

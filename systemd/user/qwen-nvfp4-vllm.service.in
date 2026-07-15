@@ -9,7 +9,7 @@ WorkingDirectory={{INSTALL_ROOT}}
 Environment=SPARK_MODEL_DIR={{MODEL_DIR}}
 Environment=SPARK_VLLM_IMAGE={{VLLM_IMAGE}}
 ExecStart={{INSTALL_ROOT}}/bin/qwen-nvfp4-vllm.sh
-ExecStop=-/usr/bin/docker stop qwen-nvfp4-vllm
+ExecStop=-{{INSTALL_ROOT}}/bin/docker-command.sh stop qwen-nvfp4-vllm
 Restart=on-failure
 RestartSec=15
 TimeoutStartSec=900

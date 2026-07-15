@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+DOCKER="$SCRIPT_DIR/docker-command.sh"
 MODEL_DIR=${SPARK_MODEL_DIR:-$HOME/models/hf}
 VLLM_IMAGE=${SPARK_VLLM_IMAGE:-vllm/vllm-openai:nightly}
 PORT=${QWEN_PORT:-8000}
@@ -13,8 +15,8 @@ if [ ! -e "$MODEL_PATH/config.json" ]; then
   exit 2
 fi
 systemctl --user stop mistral-medium-vllm.service ornith-vllm.service >/dev/null 2>&1 || true
-docker rm -f mistral-medium-vllm ornith-vllm qwen-nvfp4-vllm >/dev/null 2>&1 || true
-exec docker run --rm --init \
+"$DOCKER" rm -f mistral-medium-vllm ornith-vllm qwen-nvfp4-vllm >/dev/null 2>&1 || true
+exec "$DOCKER" run --rm --init \
   --name qwen-nvfp4-vllm \
   --gpus all \
   --ipc=host \

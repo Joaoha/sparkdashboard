@@ -268,6 +268,34 @@ class InstallerRecoveryTests(unittest.TestCase):
         self.assertTrue(any(cmd[0] == "cmake" for cmd in events))
         self.assertTrue(any("decord/python" in " ".join(cmd) for cmd in events))
 
+    def test_docker_command_uses_passwordless_sudo_fallback(self):
+        """A user service must work immediately when Docker group membership needs a new login."""
+        fake_bin = self.temp / "bin"
+        fake_bin.mkdir()
+        docker = fake_bin / "docker"
+        docker.write_text(
+            "#!/bin/sh\n"
+            "if [ \"$1\" = info ]; then\n"
+            "  [ \"${DOCKER_VIA_SUDO:-}\" = 1 ] && exit 0\n"
+            "  exit 1\n"
+            "fi\n"
+            "printf 'docker:%s\\n' \"$*\"\n"
+        )
+        sudo = fake_bin / "sudo"
+        sudo.write_text("#!/bin/sh\n[ \"$1\" = -n ] && shift\nDOCKER_VIA_SUDO=1 exec \"$@\"\n")
+        docker.chmod(0o755)
+        sudo.chmod(0o755)
+
+        completed = subprocess.run(
+            [str(REPO_ROOT / "bin/docker-command.sh"), "run", "--rm", "example/image"],
+            env={**os.environ, "PATH": f"{fake_bin}:{os.environ['PATH']}"},
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("docker:run --rm example/image", completed.stdout)
+        self.assertIn("using passwordless sudo", completed.stderr)
+
     def test_install_dry_run_includes_domainshuttle_dependency_steps(self):
         """Top-level --dry-run must not hide package dependency work."""
         completed = subprocess.run(

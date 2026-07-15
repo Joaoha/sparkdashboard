@@ -9,7 +9,7 @@ WorkingDirectory={{INSTALL_ROOT}}
 Environment=SPARK_MODEL_DIR={{MODEL_DIR}}
 Environment=SPARK_VLLM_IMAGE={{VLLM_IMAGE}}
 ExecStart={{INSTALL_ROOT}}/bin/ornith-vllm.sh
-ExecStop=-/usr/bin/docker stop ornith-vllm
+ExecStop=-{{INSTALL_ROOT}}/bin/docker-command.sh stop ornith-vllm
 Restart=on-failure
 RestartSec=15
 TimeoutStartSec=1200
