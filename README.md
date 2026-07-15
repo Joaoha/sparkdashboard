@@ -20,15 +20,15 @@ Optional app packages: [Optional Spark app packages](docs/optional-packages.md)
 ## One-command install on a fresh Spark
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/0c25853e7fd8b27121524549979629c3e06745f2/bootstrap.sh | SPARKDASHBOARD_REF=0c25853e7fd8b27121524549979629c3e06745f2 bash -s -- --packages all --start dashboard
+curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/8d2794ffb4db5eccbdddb0977efbfa3bbb5a335c/bootstrap.sh | SPARKDASHBOARD_REF=8d2794ffb4db5eccbdddb0977efbfa3bbb5a335c bash -s -- --packages all --start dashboard
 ```
 
-This command pins both the bootstrap script and installed source tree to immutable Git commit `0c25853e7fd8b27121524549979629c3e06745f2`. It uses a temporary checkout and can be run again after failure. Before any model download, it presents an interactive choice with each model's disk estimate; enter `all`, `none`, or a subset such as `qwen,mistral`. The default selection is `none`, so large downloads are opt-in. For unattended installs, pass `--models all`, `--models none`, or a comma-separated subset explicitly. It reuses complete optional-package checkouts, quarantines incomplete clones instead of deleting them, and resumes from failed dependency steps. Add `--package-models all` if you also want optional app model weights downloaded in the same run.
+This command pins both the bootstrap script and installed source tree to immutable Git commit `8d2794ffb4db5eccbdddb0977efbfa3bbb5a335c`. It uses a temporary checkout and can be run again after failure. Before any model download, it presents an interactive choice with each model's disk estimate; enter `all`, `none`, or a subset such as `qwen,mistral`. The default selection is `none`, so large downloads are opt-in. For unattended installs, pass `--models all`, `--models none`, or a comma-separated subset explicitly. It reuses complete optional-package checkouts, quarantines incomplete clones instead of deleting them, and resumes from failed dependency steps. Add `--package-models all` if you also want optional app model weights downloaded in the same run.
 
 To install the dashboard/services first and download models later:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/0c25853e7fd8b27121524549979629c3e06745f2/bootstrap.sh | SPARKDASHBOARD_REF=0c25853e7fd8b27121524549979629c3e06745f2 bash -s -- --skip-model-download --start dashboard
+curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/8d2794ffb4db5eccbdddb0977efbfa3bbb5a335c/bootstrap.sh | SPARKDASHBOARD_REF=8d2794ffb4db5eccbdddb0977efbfa3bbb5a335c bash -s -- --skip-model-download --start dashboard
 sparkdashboard-download-models qwen,ornith,mistral --model-dir ~/models/hf
 ```
 
@@ -75,7 +75,7 @@ Use these providers in OpenCode if you also configure OpenCode against this Spar
 ## Custom install options
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/0c25853e7fd8b27121524549979629c3e06745f2/bootstrap.sh | SPARKDASHBOARD_REF=0c25853e7fd8b27121524549979629c3e06745f2 bash -s -- \
+curl -fsSL https://raw.githubusercontent.com/joaoha/sparkdashboard/8d2794ffb4db5eccbdddb0977efbfa3bbb5a335c/bootstrap.sh | SPARKDASHBOARD_REF=8d2794ffb4db5eccbdddb0977efbfa3bbb5a335c bash -s -- \
   --install-root /opt/spark-dashboard \
   --model-dir /home/$USER/models/hf \
   --public-host my-spark.local \
